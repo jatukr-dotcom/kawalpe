@@ -30,11 +30,23 @@ class _DetailScreenState extends State<DetailScreen> {
   late PlantingPoint _point;
   final _db = DatabaseHelper();
   final _auth = AuthService();
+  String? _namaPerekam; // Nama lengkap petugas pengisi
 
   @override
   void initState() {
     super.initState();
     _point = widget.point;
+    _loadNamaPerekam();
+  }
+
+  /// Ambil nama lengkap petugas dari tabel app_users berdasarkan recorded_by
+  Future<void> _loadNamaPerekam() async {
+    final username = _point.recordedBy;
+    if (username == null || username.isEmpty) return;
+    final user = await _db.getUserByUsername(username);
+    if (user != null && mounted) {
+      setState(() => _namaPerekam = user.nama);
+    }
   }
 
   /// Apakah user saat ini boleh edit/hapus titik ini?
@@ -214,10 +226,21 @@ class _DetailScreenState extends State<DetailScreen> {
                   _buildInfoCard([
                     _buildInfoRow(Icons.access_time, 'Waktu',
                         _formatTimestamp(_point.timestamp)),
-                    _buildInfoRow(Icons.phone_android, 'Device ID',
-                        _point.deviceId.length > 16
-                            ? '${_point.deviceId.substring(0, 16)}...'
-                            : _point.deviceId),
+                    // Nama petugas pengisi
+                    _buildInfoRow(
+                      Icons.person_pin,
+                      'Petugas',
+                      _namaPerekam != null
+                          ? '$_namaPerekam (@${_point.recordedBy})'
+                          : (_point.recordedBy ?? 'Tidak diketahui'),
+                    ),
+                    _buildInfoRow(
+                      Icons.phone_android,
+                      'Device ID',
+                      _point.deviceId.length > 16
+                          ? '${_point.deviceId.substring(0, 16)}...'
+                          : _point.deviceId,
+                    ),
                     if (_point.fotoCloudUrl != null)
                       _buildInfoRow(Icons.cloud_done, 'Foto Cloud',
                           'Tersimpan di Cloudinary'),
