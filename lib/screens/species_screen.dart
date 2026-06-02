@@ -3,6 +3,7 @@
 // =========================================================
 import 'package:flutter/material.dart';
 import '../services/species_service.dart';
+import '../services/sync_service.dart';
 
 class SpeciesScreen extends StatefulWidget {
   const SpeciesScreen({super.key});
@@ -13,14 +14,18 @@ class SpeciesScreen extends StatefulWidget {
 
 class _SpeciesScreenState extends State<SpeciesScreen> {
   final SpeciesService _service = SpeciesService();
+  final SyncService _sync = SyncService();
   final _controller = TextEditingController();
   List<String> _daftar = [];
   bool _loading = true;
+  bool _syncing = false;
 
   @override
   void initState() {
     super.initState();
     _load();
+    // Auto-pull dari server saat buka halaman
+    _syncWithServer(silent: true);
   }
 
   @override
@@ -34,6 +39,39 @@ class _SpeciesScreenState extends State<SpeciesScreen> {
     if (mounted) setState(() { _daftar = list; _loading = false; });
   }
 
+  /// Sync spesies dengan Supabase (push lokal + pull server)
+  Future<void> _syncWithServer({bool silent = false}) async {
+    if (_syncing) return;
+    if (mounted) setState(() => _syncing = true);
+
+    final result = await _sync.syncSpesies();
+    await _load(); // Refresh daftar setelah sync
+
+    if (mounted) {
+      setState(() => _syncing = false);
+      if (!silent || result.hasChanges || result.hasError) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(children: [
+              Icon(
+                result.hasError ? Icons.error_outline : Icons.sync,
+                color: Colors.white,
+                size: 16,
+              ),
+              const SizedBox(width: 8),
+              Expanded(child: Text(result.ringkasan)),
+            ]),
+            backgroundColor: result.hasError
+                ? Colors.orange
+                : const Color(0xFF2E7D32),
+            behavior: SnackBarBehavior.floating,
+            duration: const Duration(seconds: 3),
+          ),
+        );
+      }
+    }
+  }
+
   Future<void> _tambah() async {
     final nama = _controller.text.trim();
     if (nama.isEmpty) return;
@@ -44,6 +82,8 @@ class _SpeciesScreenState extends State<SpeciesScreen> {
     if (success) {
       _controller.clear();
       await _load();
+      // Push spesies baru ke server di background
+      _sync.pushSpesies();
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('✅ "$nama" ditambahkan'),
@@ -96,6 +136,26 @@ class _SpeciesScreenState extends State<SpeciesScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Kelola Jenis Tanaman'),
+        actions: [
+          // Tombol sync manual
+          _syncing
+              ? const Padding(
+                  padding: EdgeInsets.all(14),
+                  child: SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(
+                      color: Colors.white,
+                      strokeWidth: 2,
+                    ),
+                  ),
+                )
+              : IconButton(
+                  icon: const Icon(Icons.sync),
+                  tooltip: 'Sync dengan server',
+                  onPressed: () => _syncWithServer(),
+                ),
+        ],
       ),
       body: _loading
           ? const Center(child: CircularProgressIndicator())

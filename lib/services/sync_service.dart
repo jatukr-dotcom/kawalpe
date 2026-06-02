@@ -276,6 +276,97 @@ class SyncService {
     }
   }
 
+  // =========================================================
+  // SYNC SPESIES — Dua Arah (Push + Pull)
+  // =========================================================
+
+  /// Push spesies lokal yang belum ada di Supabase
+  Future<int> pushSpesies() async {
+    final client = _getSupabaseClient();
+    if (client == null) return 0;
+
+    try {
+      // Ambil semua spesies dari Supabase
+      final serverList = await client.from('species_list').select('nama');
+      final serverNamas = (serverList as List)
+          .map((r) => (r as Map<String, dynamic>)['nama'] as String)
+          .toSet();
+
+      // Ambil spesies lokal kustom (bukan default)
+      final localList = await _db.getAllSpesies();
+
+      // Push yang ada di lokal tapi belum di server
+      int pushed = 0;
+      for (final nama in localList) {
+        if (!serverNamas.contains(nama)) {
+          try {
+            await client.from('species_list').insert({'nama': nama});
+            pushed++;
+          } catch (e) {
+            debugPrint('SyncService: Gagal push spesies "$nama": $e');
+          }
+        }
+      }
+      debugPrint('SyncService: $pushed spesies di-push ke server');
+      return pushed;
+    } catch (e) {
+      debugPrint('SyncService: Gagal push spesies: $e');
+      return 0;
+    }
+  }
+
+  /// Pull spesies dari Supabase → merge ke SQLite lokal
+  Future<int> pullSpesies() async {
+    final client = _getSupabaseClient();
+    if (client == null) return 0;
+
+    try {
+      // Ambil semua spesies dari Supabase
+      final serverList = await client
+          .from('species_list')
+          .select('nama')
+          .order('nama', ascending: true);
+
+      final serverNamas = (serverList as List)
+          .map((r) => (r as Map<String, dynamic>)['nama'] as String)
+          .toList();
+
+      // Ambil yang sudah ada di lokal
+      final localNamas = await _db.getAllSpesies();
+      final localSet = localNamas.toSet();
+
+      // Insert yang ada di server tapi belum di lokal
+      int pulled = 0;
+      for (final nama in serverNamas) {
+        if (!localSet.contains(nama)) {
+          final ok = await _db.insertSpesies(nama);
+          if (ok) pulled++;
+        }
+      }
+      debugPrint('SyncService: $pulled spesies baru dari server');
+      return pulled;
+    } catch (e) {
+      debugPrint('SyncService: Gagal pull spesies: $e');
+      return 0;
+    }
+  }
+
+  /// Sync spesies dua arah: push lokal → server, lalu pull server → lokal
+  /// Mengembalikan jumlah total spesies baru yang disync
+  Future<SyncSpeciesResult> syncSpesies() async {
+    if (!await isOnline()) {
+      return SyncSpeciesResult(pushed: 0, pulled: 0, error: 'Tidak ada koneksi internet');
+    }
+    final client = _getSupabaseClient();
+    if (client == null) {
+      return SyncSpeciesResult(pushed: 0, pulled: 0, error: 'Supabase belum dikonfigurasi');
+    }
+
+    final pushed = await pushSpesies();
+    final pulled = await pullSpesies();
+    return SyncSpeciesResult(pushed: pushed, pulled: pulled);
+  }
+
   /// Reinisialisasi Supabase dengan konfigurasi baru dari Settings
   Future<bool> reinitializeSupabase({
     required String url,
@@ -293,5 +384,30 @@ class SyncService {
       debugPrint('SyncService: Gagal reinisialisasi Supabase: $e');
       return false;
     }
+  }
+}
+
+/// Hasil sync spesies
+class SyncSpeciesResult {
+  final int pushed;
+  final int pulled;
+  final String? error;
+
+  const SyncSpeciesResult({
+    required this.pushed,
+    required this.pulled,
+    this.error,
+  });
+
+  bool get hasError => error != null;
+  bool get hasChanges => pushed > 0 || pulled > 0;
+
+  String get ringkasan {
+    if (hasError) return 'Gagal: $error';
+    if (!hasChanges) return 'Semua spesies sudah sinkron';
+    final parts = <String>[];
+    if (pushed > 0) parts.add('$pushed dikirim');
+    if (pulled > 0) parts.add('$pulled diterima');
+    return parts.join(', ');
   }
 }
