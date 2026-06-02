@@ -3,6 +3,7 @@
 // =========================================================
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:intl/date_symbol_data_local.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:uuid/uuid.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
@@ -30,6 +31,16 @@ class _AddProjectScreenState extends State<AddProjectScreen> {
   DateTime _tanggalMulai = DateTime.now();
   DateTime? _tanggalSelesai;
   bool _isSaving = false;
+  bool _localeReady = false;
+
+  @override
+  void initState() {
+    super.initState();
+    // Pastikan locale id_ID selalu siap, meski main() belum dipanggil
+    initializeDateFormatting('id_ID', null).then((_) {
+      if (mounted) setState(() => _localeReady = true);
+    });
+  }
 
   @override
   void dispose() {
@@ -37,6 +48,15 @@ class _AddProjectScreenState extends State<AddProjectScreen> {
     _lokasiController.dispose();
     _deskripsiController.dispose();
     super.dispose();
+  }
+
+  /// Format tanggal dengan aman — pakai locale id_ID jika sudah siap
+  String _formatTanggal(DateTime dt) {
+    if (_localeReady) {
+      return DateFormat('dd MMMM yyyy', 'id_ID').format(dt);
+    }
+    // Fallback sementara sebelum locale siap
+    return DateFormat('yyyy-MM-dd').format(dt);
   }
 
   Future<void> _pilihTanggal({bool isSelesai = false}) async {
@@ -238,7 +258,7 @@ class _AddProjectScreenState extends State<AddProjectScreen> {
                     prefixIcon: Icon(Icons.calendar_today),
                   ),
                   child: Text(
-                    DateFormat('dd MMMM yyyy', 'id_ID').format(_tanggalMulai),
+                    _formatTanggal(_tanggalMulai),
                     style: const TextStyle(fontSize: 16),
                   ),
                 ),
@@ -268,8 +288,7 @@ class _AddProjectScreenState extends State<AddProjectScreen> {
                   ),
                   child: Text(
                     _tanggalSelesai != null
-                        ? DateFormat('dd MMMM yyyy', 'id_ID')
-                            .format(_tanggalSelesai!)
+                        ? _formatTanggal(_tanggalSelesai!)
                         : 'Belum ditentukan',
                     style: TextStyle(
                       fontSize: 16,
