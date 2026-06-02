@@ -5,7 +5,6 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart' show launchUrl, LaunchMode;
 import 'package:intl/intl.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 import '../database/database_helper.dart';
 import '../models/planting_point.dart';
@@ -31,28 +30,25 @@ class _DetailScreenState extends State<DetailScreen> {
   late PlantingPoint _point;
   final _db = DatabaseHelper();
   final _auth = AuthService();
-  String _currentDeviceId = '';
 
   @override
   void initState() {
     super.initState();
     _point = widget.point;
-    _loadDeviceId();
-  }
-
-  Future<void> _loadDeviceId() async {
-    final prefs = await SharedPreferences.getInstance();
-    if (mounted) {
-      setState(() {
-        _currentDeviceId = prefs.getString('device_id') ?? '';
-      });
-    }
   }
 
   /// Apakah user saat ini boleh edit/hapus titik ini?
+  /// Admin bisa semua. User hanya bisa milik sendiri (cek username).
   bool get _canModify {
     if (_auth.isAdmin) return true;
-    return _point.deviceId == _currentDeviceId;
+    final currentUsername = _auth.currentUser?.username;
+    if (currentUsername == null) return false;
+    // Cek recorded_by (username), fallback ke device (data lama)
+    if (_point.recordedBy != null && _point.recordedBy!.isNotEmpty) {
+      return _point.recordedBy == currentUsername;
+    }
+    // Data lama belum punya recorded_by → tidak bisa diedit user biasa
+    return false;
   }
 
   Future<void> _editPoint() async {

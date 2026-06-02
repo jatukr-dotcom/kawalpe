@@ -129,8 +129,21 @@ class _LoginScreenState extends State<LoginScreen> {
                   children: [
                     const SizedBox(height: 24),
 
-                    // Logo & Judul
-                    const Icon(Icons.forest, size: 72, color: Colors.white),
+                    // Logo aplikasi
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(20),
+                      child: Image.asset(
+                        'assets/icon/app_icon.png',
+                        width: 88,
+                        height: 88,
+                        fit: BoxFit.contain,
+                        errorBuilder: (_, __, ___) => const Icon(
+                          Icons.forest,
+                          size: 72,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ),
                     const SizedBox(height: 12),
                     const Text(
                       'Kawal PE',

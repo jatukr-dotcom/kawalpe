@@ -9,11 +9,12 @@ class PlantingPoint {
   final double longitude;
   final double? accuracy;      // GPS accuracy dalam meter
   final String spesies;
-  final String kondisi;        // 'Baik', 'Sedang', 'Buruk'
+  final String kondisi;        // 'Sehat', 'Merana', 'Mati'
   final String? catatan;
   final String? fotoLocalPath;
   String? fotoCloudUrl;
   final String deviceId;
+  final String? recordedBy;    // Username petugas yang merekam
   final String timestamp;      // ISO 8601
   bool synced;
   int syncAttempt;
@@ -30,6 +31,7 @@ class PlantingPoint {
     this.fotoLocalPath,
     this.fotoCloudUrl,
     required this.deviceId,
+    this.recordedBy,
     required this.timestamp,
     this.synced = false,
     this.syncAttempt = 0,
@@ -49,6 +51,7 @@ class PlantingPoint {
       fotoLocalPath: map['foto_local_path'] as String?,
       fotoCloudUrl: map['foto_cloud_url'] as String?,
       deviceId: map['device_id'] as String,
+      recordedBy: map['recorded_by'] as String?,
       timestamp: map['timestamp'] as String,
       synced: (map['synced'] as int? ?? 0) == 1,
       syncAttempt: map['sync_attempt'] as int? ?? 0,
@@ -69,6 +72,7 @@ class PlantingPoint {
       'foto_local_path': fotoLocalPath,
       'foto_cloud_url': fotoCloudUrl,
       'device_id': deviceId,
+      'recorded_by': recordedBy,
       'timestamp': timestamp,
       'synced': synced ? 1 : 0,
       'sync_attempt': syncAttempt,
@@ -88,6 +92,7 @@ class PlantingPoint {
       'catatan': catatan,
       'foto_url': fotoCloudUrl,
       'device_id': deviceId,
+      'recorded_by': recordedBy,
       'timestamp': timestamp,
     };
   }

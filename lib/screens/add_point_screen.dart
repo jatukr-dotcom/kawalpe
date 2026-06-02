@@ -12,6 +12,7 @@ import '../models/planting_point.dart'; // class PlantingPoint
 import '../services/gps_service.dart';
 import '../services/camera_service.dart';
 import '../services/species_service.dart'; // kDaftarKondisi, SpeciesService
+import '../services/auth_service.dart';
 import '../widgets/gps_accuracy_meter.dart';
 import 'gps_calibration_screen.dart';
 
@@ -286,6 +287,7 @@ class _AddPointScreenState extends State<AddPointScreen> {
     setState(() => _isSaving = true);
 
     try {
+      final currentUsername = AuthService().currentUser?.username;
       final point = PlantingPoint(
         id: const Uuid().v4(),
         projectId: widget.project.id,
@@ -299,6 +301,7 @@ class _AddPointScreenState extends State<AddPointScreen> {
             : _catatanController.text.trim(),
         fotoLocalPath: _fotoPath,
         deviceId: _deviceId,
+        recordedBy: currentUsername, // simpan username petugas
         timestamp: DateTime.now().toIso8601String(),
         synced: false,
         syncAttempt: 0,

@@ -27,7 +27,7 @@ class DatabaseHelper {
 
     return await openDatabase(
       path,
-      version: 4,
+      version: 5,
       onCreate: _onCreate,
       onUpgrade: _onUpgrade,
       onConfigure: (db) async {
@@ -60,6 +60,12 @@ class DatabaseHelper {
           nama TEXT PRIMARY KEY
         )
       ''');
+    }
+    if (oldVersion < 5) {
+      // Tambah kolom recorded_by (username petugas) ke planting_points
+      await db.execute(
+        'ALTER TABLE planting_points ADD COLUMN recorded_by TEXT',
+      );
     }
   }
 
@@ -95,6 +101,7 @@ class DatabaseHelper {
         foto_local_path TEXT,
         foto_cloud_url  TEXT,
         device_id       TEXT NOT NULL,
+        recorded_by     TEXT,
         timestamp       TEXT NOT NULL,
         synced          INTEGER DEFAULT 0,
         sync_attempt    INTEGER DEFAULT 0,
