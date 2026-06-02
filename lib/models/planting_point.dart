@@ -103,18 +103,6 @@ class PlantingPoint {
   }
 }
 
-/// Daftar spesies mangrove yang tersedia
-const List<String> kDaftarSpesies = [
-  'Rhizophora mucronata',
-  'Avicennia marina',
-  'Sonneratia alba',
-  'Bruguiera gymnorrhiza',
-  'Nypa fruticans',
-  'Lainnya',
-];
-
-/// Daftar kondisi tanaman
-const List<String> kDaftarKondisi = ['Sehat', 'Merana', 'Mati'];
 
 /// Hasil operasi sync
 class SyncResult {

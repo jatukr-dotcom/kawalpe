@@ -1,6 +1,3 @@
-// =========================================================
-// screens/add_point_screen.dart - Form rekam titik tanam baru
-// =========================================================
 import 'dart:async';
 import 'dart:io';
 import 'package:flutter/material.dart';
@@ -11,10 +8,10 @@ import 'package:uuid/uuid.dart';
 
 import '../database/database_helper.dart';
 import '../models/project.dart';
-import '../models/planting_point.dart';
+import '../models/planting_point.dart'; // class PlantingPoint
 import '../services/gps_service.dart';
 import '../services/camera_service.dart';
-import '../services/species_service.dart';
+import '../services/species_service.dart'; // kDaftarKondisi, SpeciesService
 import '../widgets/gps_accuracy_meter.dart';
 import 'gps_calibration_screen.dart';
 
