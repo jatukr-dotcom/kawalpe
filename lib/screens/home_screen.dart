@@ -9,12 +9,15 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../database/database_helper.dart';
 import '../models/project.dart';
 import '../services/sync_service.dart';
+import '../services/auth_service.dart';
 import '../widgets/connectivity_badge.dart';
 import '../widgets/project_card.dart';
 import 'add_project_screen.dart';
+import 'login_screen.dart';
 import 'project_screen.dart';
 import 'settings_screen.dart';
 import 'species_screen.dart';
+import 'user_management_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -31,15 +34,12 @@ class _HomeScreenState extends State<HomeScreen> {
   Map<String, int> _globalStats = {'total_proyek': 0, 'total_titik': 0, 'belum_sync': 0};
   bool _isLoading = false;
   bool _isOnline = false;
-  String _deviceId = '';
-  String _deviceName = '';
 
   @override
   void initState() {
     super.initState();
     _loadData();
     _checkConnectivity();
-    _loadDeviceInfo();
     // Dengarkan perubahan koneksi
     Connectivity().onConnectivityChanged.listen((results) {
       if (mounted) {
@@ -47,14 +47,6 @@ class _HomeScreenState extends State<HomeScreen> {
           _isOnline = !results.contains(ConnectivityResult.none);
         });
       }
-    });
-  }
-
-  Future<void> _loadDeviceInfo() async {
-    final prefs = await SharedPreferences.getInstance();
-    setState(() {
-      _deviceId = prefs.getString('device_id') ?? '';
-      _deviceName = prefs.getString('device_name') ?? 'HP Tidak Dikenal';
     });
   }
 
@@ -411,11 +403,15 @@ class _HomeScreenState extends State<HomeScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Column(
+        title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Kawal PE', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-            Text('Monitor Pemulihan Ekosistem', style: TextStyle(fontSize: 11, color: Colors.white70)),
+            const Text('Kawal PE',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            Text(
+              'Halo, ${AuthService().namaUser}',
+              style: const TextStyle(fontSize: 11, color: Colors.white70),
+            ),
           ],
         ),
         actions: [
@@ -450,34 +446,66 @@ class _HomeScreenState extends State<HomeScreen> {
                   context,
                   MaterialPageRoute(builder: (_) => const SpeciesScreen()),
                 );
+              } else if (value == 'users') {
+                await Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                      builder: (_) => const UserManagementScreen()),
+                );
               } else if (value == 'settings') {
                 await Navigator.push(
                   context,
                   MaterialPageRoute(builder: (_) => const SettingsScreen()),
                 );
                 _loadData();
+              } else if (value == 'logout') {
+                await AuthService().logout();
+                if (mounted) {
+                  Navigator.of(context).pushAndRemoveUntil(
+                    MaterialPageRoute(
+                        builder: (_) => const LoginScreen()),
+                    (route) => false,
+                  );
+                }
               }
             },
             itemBuilder: (_) => [
               const PopupMenuItem(
                 value: 'species',
-                child: Row(
-                  children: [
-                    Icon(Icons.local_florist, color: Color(0xFF2E7D32)),
-                    SizedBox(width: 8),
-                    Text('Kelola Jenis Tanaman'),
-                  ],
-                ),
+                child: Row(children: [
+                  Icon(Icons.local_florist, color: Color(0xFF2E7D32)),
+                  SizedBox(width: 8),
+                  Text('Kelola Jenis Tanaman'),
+                ]),
               ),
-              const PopupMenuItem(
-                value: 'settings',
-                child: Row(
-                  children: [
+              // Menu Kelola User hanya untuk admin
+              if (AuthService().isAdmin)
+                const PopupMenuItem(
+                  value: 'users',
+                  child: Row(children: [
+                    Icon(Icons.manage_accounts, color: Colors.blue),
+                    SizedBox(width: 8),
+                    Text('Kelola Pengguna'),
+                  ]),
+                ),
+              // Pengaturan hanya untuk admin
+              if (AuthService().isAdmin)
+                const PopupMenuItem(
+                  value: 'settings',
+                  child: Row(children: [
                     Icon(Icons.settings, color: Colors.grey),
                     SizedBox(width: 8),
                     Text('Pengaturan'),
-                  ],
+                  ]),
                 ),
+              const PopupMenuDivider(),
+              const PopupMenuItem(
+                value: 'logout',
+                child: Row(children: [
+                  Icon(Icons.logout, color: Colors.red),
+                  SizedBox(width: 8),
+                  Text('Keluar', style: TextStyle(color: Colors.red)),
+                ]),
               ),
             ],
           ),
@@ -514,9 +542,12 @@ class _HomeScreenState extends State<HomeScreen> {
                                       ProjectScreen(project: project),
                                 ),
                               );
-                              _loadData(); // Refresh setelah kembali
+                              _loadData();
                             },
-                            onDelete: () => _confirmDeleteProject(project),
+                            // Hapus proyek hanya boleh admin
+                            onDelete: AuthService().isAdmin
+                                ? () => _confirmDeleteProject(project)
+                                : null,
                           );
                         },
                         childCount: _projects.length,

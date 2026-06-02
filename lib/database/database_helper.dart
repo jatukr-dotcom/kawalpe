@@ -6,6 +6,7 @@ import 'package:path/path.dart';
 
 import '../models/project.dart';
 import '../models/planting_point.dart';
+import '../models/app_user.dart';
 
 class DatabaseHelper {
   static final DatabaseHelper _instance = DatabaseHelper._internal();
@@ -26,7 +27,7 @@ class DatabaseHelper {
 
     return await openDatabase(
       path,
-      version: 2,
+      version: 3,
       onCreate: _onCreate,
       onUpgrade: _onUpgrade,
       onConfigure: (db) async {
@@ -38,10 +39,20 @@ class DatabaseHelper {
   /// Migrasi database antar versi
   Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
     if (oldVersion < 2) {
-      // Tambah kolom penanggungjawab ke tabel projects
-      await db.execute(
-        'ALTER TABLE projects ADD COLUMN penanggungjawab TEXT'
-      );
+      await db.execute('ALTER TABLE projects ADD COLUMN penanggungjawab TEXT');
+    }
+    if (oldVersion < 3) {
+      // Tabel pengguna lokal
+      await db.execute('''
+        CREATE TABLE IF NOT EXISTS app_users (
+          id            TEXT PRIMARY KEY,
+          nama          TEXT NOT NULL,
+          username      TEXT UNIQUE NOT NULL,
+          password_hash TEXT NOT NULL,
+          role          TEXT NOT NULL DEFAULT 'user',
+          created_at    TEXT NOT NULL
+        )
+      ''');
     }
   }
 
@@ -54,6 +65,7 @@ class DatabaseHelper {
         nama_proyek       TEXT NOT NULL,
         lokasi            TEXT NOT NULL,
         deskripsi         TEXT,
+        penanggungjawab   TEXT,
         tanggal_mulai     TEXT NOT NULL,
         tanggal_selesai   TEXT,
         created_by_device TEXT NOT NULL,
@@ -80,6 +92,18 @@ class DatabaseHelper {
         synced          INTEGER DEFAULT 0,
         sync_attempt    INTEGER DEFAULT 0,
         FOREIGN KEY (project_id) REFERENCES projects(id)
+      )
+    ''');
+
+    // Tabel pengguna lokal
+    await db.execute('''
+      CREATE TABLE app_users (
+        id            TEXT PRIMARY KEY,
+        nama          TEXT NOT NULL,
+        username      TEXT UNIQUE NOT NULL,
+        password_hash TEXT NOT NULL,
+        role          TEXT NOT NULL DEFAULT 'user',
+        created_at    TEXT NOT NULL
       )
     ''');
 
@@ -303,5 +327,114 @@ class DatabaseHelper {
       'SELECT COUNT(*) as count FROM planting_points WHERE synced = 0',
     );
     return (result.first['count'] as int?) ?? 0;
+  }
+
+  /// Edit data titik tanam (kondisi, spesies, catatan) - reset synced ke 0
+  Future<void> updatePoint(PlantingPoint point) async {
+    final db = await database;
+    await db.update(
+      'planting_points',
+      {
+        'spesies': point.spesies,
+        'kondisi': point.kondisi,
+        'catatan': point.catatan,
+        'synced': 0, // perlu sync ulang setelah edit
+      },
+      where: 'id = ?',
+      whereArgs: [point.id],
+    );
+  }
+
+  // =========================================================
+  // MANAJEMEN USER
+  // =========================================================
+
+  /// Simpan user baru ke database
+  Future<void> insertUser(AppUser user) async {
+    final db = await database;
+    await db.insert(
+      'app_users',
+      user.toMap(),
+      conflictAlgorithm: ConflictAlgorithm.abort,
+    );
+  }
+
+  /// Ambil user berdasarkan ID
+  Future<AppUser?> getUserById(String id) async {
+    final db = await database;
+    final result = await db.query(
+      'app_users',
+      where: 'id = ?',
+      whereArgs: [id],
+      limit: 1,
+    );
+    if (result.isEmpty) return null;
+    return AppUser.fromMap(result.first);
+  }
+
+  /// Ambil user berdasarkan username
+  Future<AppUser?> getUserByUsername(String username) async {
+    final db = await database;
+    final result = await db.query(
+      'app_users',
+      where: 'username = ?',
+      whereArgs: [username],
+      limit: 1,
+    );
+    if (result.isEmpty) return null;
+    return AppUser.fromMap(result.first);
+  }
+
+  /// Ambil user berdasarkan username DAN password hash (untuk login)
+  Future<AppUser?> getUserByCredentials(String username, String passwordHash) async {
+    final db = await database;
+    final result = await db.query(
+      'app_users',
+      where: 'username = ? AND password_hash = ?',
+      whereArgs: [username, passwordHash],
+      limit: 1,
+    );
+    if (result.isEmpty) return null;
+    return AppUser.fromMap(result.first);
+  }
+
+  /// Ambil semua user
+  Future<List<AppUser>> getAllUsers() async {
+    final db = await database;
+    final result = await db.query(
+      'app_users',
+      orderBy: 'role DESC, nama ASC', // admin dulu
+    );
+    return result.map((map) => AppUser.fromMap(map)).toList();
+  }
+
+  /// Cek apakah sudah ada user (first-run check)
+  Future<bool> hasAnyUser() async {
+    final db = await database;
+    final result = await db.rawQuery('SELECT COUNT(*) as count FROM app_users');
+    return ((result.first['count'] as int?) ?? 0) > 0;
+  }
+
+  /// Update password user
+  Future<bool> updateUserPassword(String username, String passwordHash) async {
+    final db = await database;
+    final count = await db.update(
+      'app_users',
+      {'password_hash': passwordHash},
+      where: 'username = ?',
+      whereArgs: [username],
+    );
+    return count > 0;
+  }
+
+  /// Hapus user berdasarkan ID
+  Future<bool> deleteUser(String userId) async {
+    final db = await database;
+    final count = await db.delete(
+      'app_users',
+      where: 'id = ?',
+      whereArgs: [userId],
+    );
+    return count > 0;
   }
 }

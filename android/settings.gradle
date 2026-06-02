@@ -1,2 +1,0 @@
-// Konfigurasi dipindah ke settings.gradle.kts
-// File ini dikosongkan untuk menghindari konflik Groovy vs Kotlin DSL

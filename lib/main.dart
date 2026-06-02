@@ -9,6 +9,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:intl/date_symbol_data_local.dart';
 
 import 'screens/home_screen.dart';
+import 'screens/login_screen.dart';
+import 'services/auth_service.dart';
 
 // Warna tema aplikasi - hijau BKSDA
 const Color kPrimaryColor = Color(0xFF2E7D32);
@@ -30,6 +32,9 @@ void main() async {
 
   // Inisialisasi Supabase dari settings tersimpan
   await _initSupabase();
+
+  // Muat sesi login dari penyimpanan lokal
+  await AuthService().loadSession();
 
   runApp(const KawalPEApp());
 }
@@ -127,7 +132,10 @@ class KawalPEApp extends StatelessWidget {
         ),
         scaffoldBackgroundColor: kBackgroundColor,
       ),
-      home: const HomeScreen(),
+      // Auth gate: tampilkan LoginScreen atau HomeScreen
+      home: AuthService().isLoggedIn
+          ? const HomeScreen()
+          : const LoginScreen(),
     );
   }
 }

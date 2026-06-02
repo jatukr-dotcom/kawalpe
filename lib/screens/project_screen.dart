@@ -334,15 +334,15 @@ class _ProjectScreenState extends State<ProjectScreen> {
   }
 
   Widget _buildPointTile(PlantingPoint point) {
-    Color kondisiColor;
-    switch (point.kondisi) {
-      case 'Baik':
-        kondisiColor = Colors.green;
-      case 'Sedang':
-        kondisiColor = Colors.orange;
-      default:
-        kondisiColor = Colors.red;
-    }
+    final Map<String, Color> kondisiColors = {
+      'Sehat': Colors.green,
+      'Merana': Colors.orange,
+      'Mati': Colors.red,
+      'Baik': Colors.green,   // backward compat
+      'Sedang': Colors.orange,
+      'Buruk': Colors.red,
+    };
+    final kondisiColor = kondisiColors[point.kondisi] ?? Colors.grey;
 
     return Card(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
