@@ -14,6 +14,7 @@ import '../widgets/project_card.dart';
 import 'add_project_screen.dart';
 import 'project_screen.dart';
 import 'settings_screen.dart';
+import 'species_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -439,17 +440,46 @@ class _HomeScreenState extends State<HomeScreen> {
               tooltip: 'Sync Semua Data',
               onPressed: _syncAll,
             ),
-          // Settings
-          IconButton(
-            icon: const Icon(Icons.settings),
-            tooltip: 'Pengaturan',
-            onPressed: () async {
-              await Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const SettingsScreen()),
-              );
-              _loadData();
+          // Settings + menu lainnya
+          PopupMenuButton<String>(
+            icon: const Icon(Icons.more_vert),
+            tooltip: 'Menu Lainnya',
+            onSelected: (value) async {
+              if (value == 'species') {
+                await Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const SpeciesScreen()),
+                );
+              } else if (value == 'settings') {
+                await Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const SettingsScreen()),
+                );
+                _loadData();
+              }
             },
+            itemBuilder: (_) => [
+              const PopupMenuItem(
+                value: 'species',
+                child: Row(
+                  children: [
+                    Icon(Icons.local_florist, color: Color(0xFF2E7D32)),
+                    SizedBox(width: 8),
+                    Text('Kelola Jenis Tanaman'),
+                  ],
+                ),
+              ),
+              const PopupMenuItem(
+                value: 'settings',
+                child: Row(
+                  children: [
+                    Icon(Icons.settings, color: Colors.grey),
+                    SizedBox(width: 8),
+                    Text('Pengaturan'),
+                  ],
+                ),
+              ),
+            ],
           ),
         ],
       ),
