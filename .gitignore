@@ -1,0 +1,37 @@
+# Dependensi Flutter/Dart
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.packages
+build/
+pubspec.lock
+
+# Android generated files
+android/.gradle/
+android/captures/
+android/gradlew
+android/gradlew.bat
+android/local.properties
+android/key.properties
+android/app/debug.keystore
+
+# IDE files
+.idea/
+*.iml
+*.ipr
+*.iws
+.vscode/
+
+# macOS
+.DS_Store
+
+# Env & secrets
+*.env
+.env.*
+
+# Test coverage
+coverage/
+
+# Generated files
+*.g.dart
+*.freezed.dart
