@@ -3,6 +3,7 @@
 // =========================================================
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:intl/date_symbol_data_local.dart';
@@ -57,6 +58,17 @@ class KawalPEApp extends StatelessWidget {
     return MaterialApp(
       title: 'Kawal PE',
       debugShowCheckedModeBanner: false,
+      // Lokalisasi untuk DatePicker, dll dalam Bahasa Indonesia
+      localizationsDelegates: const [
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+      ],
+      supportedLocales: const [
+        Locale('id', 'ID'), // Indonesia
+        Locale('en', 'US'), // Fallback
+      ],
+      locale: const Locale('id', 'ID'),
       theme: ThemeData(
         useMaterial3: true,
         colorScheme: ColorScheme.fromSeed(
