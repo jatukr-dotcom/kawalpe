@@ -65,9 +65,7 @@ class GpsService {
 
     try {
       return await Geolocator.getCurrentPosition(
-        locationSettings: const LocationSettings(
-          accuracy: LocationAccuracy.best,
-        ),
+        desiredAccuracy: LocationAccuracy.best,
       );
     } catch (e) {
       debugPrint('Gagal mendapatkan posisi: $e');
