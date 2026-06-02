@@ -4,7 +4,7 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:flutter_image_compress/flutter_image_compress.dart';
+import 'package:image/image.dart' as img;
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 
@@ -30,7 +30,9 @@ class CameraService {
       final XFile? photo = await _picker.pickImage(
         source: ImageSource.camera,
         preferredCameraDevice: CameraDevice.rear,
-        imageQuality: 100, // Ambil kualitas penuh dulu, kompres manual
+        imageQuality: 85, // Kompres via image_picker langsung
+        maxWidth: 1600,
+        maxHeight: 1200,
       );
 
       if (photo == null) {
@@ -38,7 +40,7 @@ class CameraService {
         return null;
       }
 
-      // Buat direktori penyimpanan di dalam app (bukan DCIM publik)
+      // Buat direktori penyimpanan di dalam app
       final appDir = await getApplicationDocumentsDirectory();
       final photosDir = Directory(p.join(appDir.path, 'photos'));
       if (!await photosDir.exists()) {
@@ -47,35 +49,26 @@ class CameraService {
 
       // Nama file unik berdasarkan timestamp
       final fileName = 'kawalpe_${DateTime.now().millisecondsSinceEpoch}.jpg';
-      final compressedPath = p.join(photosDir.path, fileName);
+      final outputPath = p.join(photosDir.path, fileName);
 
-      // Kompres foto menggunakan FlutterImageCompress
+      // Kompres menggunakan package 'image' (tanpa native plugin)
       String finalPath;
       try {
-        final result = await FlutterImageCompress.compressAndGetFile(
-          photo.path,
-          compressedPath,
-          quality: 70,
-          minWidth: 800,
-          minHeight: 600,
-          format: CompressFormat.jpeg,
-        );
-
-        if (result == null) {
-          // Edge case 5: Kompres gagal → pakai foto original
-          debugPrint('CameraService: Kompres gagal, pakai foto original');
-          final originalFile = File(photo.path);
-          await originalFile.copy(compressedPath);
-          finalPath = compressedPath;
+        final bytes = await File(photo.path).readAsBytes();
+        final decoded = img.decodeImage(bytes);
+        if (decoded != null) {
+          final compressed = img.encodeJpg(decoded, quality: 70);
+          await File(outputPath).writeAsBytes(compressed);
+          finalPath = outputPath;
         } else {
-          finalPath = result.path;
+          // Fallback: salin file original
+          await File(photo.path).copy(outputPath);
+          finalPath = outputPath;
         }
       } catch (compressError) {
-        // Edge case 5: Error saat kompres → pakai foto original
         debugPrint('CameraService: Error kompres: $compressError. Pakai original.');
-        final originalFile = File(photo.path);
-        await originalFile.copy(compressedPath);
-        finalPath = compressedPath;
+        await File(photo.path).copy(outputPath);
+        finalPath = outputPath;
       }
 
       // Tambahkan overlay geotag ke gambar
