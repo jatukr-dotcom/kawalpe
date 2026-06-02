@@ -99,108 +99,121 @@ class _SpeciesScreenState extends State<SpeciesScreen> {
       ),
       body: _loading
           ? const Center(child: CircularProgressIndicator())
-          : Column(
-              children: [
-                // Form tambah spesies baru
-                Container(
-                  padding: const EdgeInsets.all(16),
-                  color: Colors.white,
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: TextField(
-                          controller: _controller,
-                          decoration: InputDecoration(
-                            labelText: 'Nama spesies baru',
-                            hintText: 'Contoh: Ceriops tagal',
-                            prefixIcon: const Icon(Icons.local_florist),
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            contentPadding: const EdgeInsets.symmetric(
-                              horizontal: 12, vertical: 12),
-                          ),
-                          textCapitalization: TextCapitalization.sentences,
-                          onSubmitted: (_) => _tambah(),
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      SizedBox(
-                        height: 52,
-                        child: ElevatedButton(
-                          onPressed: _tambah,
-                          style: ElevatedButton.styleFrom(
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                          ),
-                          child: const Icon(Icons.add),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const Divider(height: 1),
-
-                // Keterangan
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                  child: Row(
-                    children: [
-                      const Icon(Icons.info_outline, size: 14, color: Colors.grey),
-                      const SizedBox(width: 4),
-                      Text(
-                        '${_daftar.length} spesies • Spesies default tidak bisa dihapus',
-                        style: const TextStyle(fontSize: 12, color: Colors.grey),
-                      ),
-                    ],
-                  ),
-                ),
-
-                // Daftar spesies
-                Expanded(
-                  child: ListView.separated(
-                    itemCount: _daftar.length,
-                    separatorBuilder: (_, __) => const Divider(height: 1),
-                    itemBuilder: (context, index) {
-                      final spesies = _daftar[index];
-                      final isDefault = _service.isDefault(spesies);
-                      return ListTile(
-                        leading: CircleAvatar(
-                          backgroundColor: isDefault
-                              ? const Color(0xFF2E7D32).withOpacity(0.1)
-                              : Colors.blue.withOpacity(0.1),
-                          child: Icon(
-                            Icons.local_florist,
-                            size: 20,
-                            color: isDefault
-                                ? const Color(0xFF2E7D32)
-                                : Colors.blue,
-                          ),
-                        ),
-                        title: Text(
-                          spesies,
-                          style: const TextStyle(fontSize: 14),
-                        ),
-                        subtitle: isDefault
-                            ? const Text('Spesies default',
-                                style: TextStyle(fontSize: 11))
-                            : const Text('Ditambahkan manual',
-                                style: TextStyle(fontSize: 11, color: Colors.blue)),
-                        trailing: isDefault
-                            ? const Icon(Icons.lock_outline,
-                                size: 16, color: Colors.grey)
-                            : IconButton(
-                                icon: const Icon(Icons.delete_outline,
-                                    color: Colors.red),
-                                onPressed: () => _hapus(spesies),
-                                tooltip: 'Hapus',
+          : SafeArea(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  // Form tambah spesies baru
+                  Material(
+                    color: Colors.white,
+                    elevation: 1,
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        children: [
+                          Expanded(
+                            child: TextField(
+                              controller: _controller,
+                              decoration: InputDecoration(
+                                labelText: 'Nama spesies baru',
+                                hintText: 'Contoh: Ceriops tagal',
+                                prefixIcon: const Icon(Icons.local_florist),
+                                isDense: false,
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                contentPadding: const EdgeInsets.symmetric(
+                                    horizontal: 12, vertical: 14),
                               ),
-                      );
-                    },
+                              textCapitalization: TextCapitalization.sentences,
+                              onSubmitted: (_) => _tambah(),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          ElevatedButton(
+                            onPressed: _tambah,
+                            style: ElevatedButton.styleFrom(
+                              minimumSize: const Size(52, 52),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              padding: EdgeInsets.zero,
+                            ),
+                            child: const Icon(Icons.add, size: 24),
+                          ),
+                        ],
+                      ),
+                    ),
                   ),
-                ),
-              ],
+                  const Divider(height: 1),
+
+                  // Keterangan jumlah spesies
+                  Padding(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 16, vertical: 8),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.info_outline,
+                            size: 14, color: Colors.grey),
+                        const SizedBox(width: 4),
+                        Expanded(
+                          child: Text(
+                            '${_daftar.length} spesies • Spesies default tidak bisa dihapus',
+                            style: const TextStyle(
+                                fontSize: 12, color: Colors.grey),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  // Daftar spesies
+                  Expanded(
+                    child: ListView.separated(
+                      itemCount: _daftar.length,
+                      separatorBuilder: (_, __) => const Divider(height: 1),
+                      itemBuilder: (context, index) {
+                        final spesies = _daftar[index];
+                        final isDefault = _service.isDefault(spesies);
+                        return ListTile(
+                          leading: CircleAvatar(
+                            backgroundColor: isDefault
+                                ? const Color(0xFF2E7D32).withValues(alpha: 0.1)
+                                : Colors.blue.withValues(alpha: 0.1),
+                            child: Icon(
+                              Icons.local_florist,
+                              size: 20,
+                              color: isDefault
+                                  ? const Color(0xFF2E7D32)
+                                  : Colors.blue,
+                            ),
+                          ),
+                          title: Text(
+                            spesies,
+                            style: const TextStyle(fontSize: 14),
+                          ),
+                          subtitle: isDefault
+                              ? const Text('Spesies default',
+                                  style: TextStyle(fontSize: 11))
+                              : const Text('Ditambahkan manual',
+                                  style: TextStyle(
+                                      fontSize: 11, color: Colors.blue)),
+                          trailing: isDefault
+                              ? const Icon(Icons.lock_outline,
+                                  size: 16, color: Colors.grey)
+                              : IconButton(
+                                  icon: const Icon(Icons.delete_outline,
+                                      color: Colors.red),
+                                  onPressed: () => _hapus(spesies),
+                                  tooltip: 'Hapus',
+                                ),
+                        );
+                      },
+                    ),
+                  ),
+                ],
+              ),
             ),
     );
   }
