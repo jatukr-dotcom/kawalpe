@@ -27,7 +27,7 @@ class DatabaseHelper {
 
     return await openDatabase(
       path,
-      version: 3,
+      version: 4,
       onCreate: _onCreate,
       onUpgrade: _onUpgrade,
       onConfigure: (db) async {
@@ -42,7 +42,6 @@ class DatabaseHelper {
       await db.execute('ALTER TABLE projects ADD COLUMN penanggungjawab TEXT');
     }
     if (oldVersion < 3) {
-      // Tabel pengguna lokal
       await db.execute('''
         CREATE TABLE IF NOT EXISTS app_users (
           id            TEXT PRIMARY KEY,
@@ -51,6 +50,14 @@ class DatabaseHelper {
           password_hash TEXT NOT NULL,
           role          TEXT NOT NULL DEFAULT 'user',
           created_at    TEXT NOT NULL
+        )
+      ''');
+    }
+    if (oldVersion < 4) {
+      // Tabel daftar spesies kustom (pindah dari SharedPreferences)
+      await db.execute('''
+        CREATE TABLE IF NOT EXISTS species_list (
+          nama TEXT PRIMARY KEY
         )
       ''');
     }
@@ -104,6 +111,13 @@ class DatabaseHelper {
         password_hash TEXT NOT NULL,
         role          TEXT NOT NULL DEFAULT 'user',
         created_at    TEXT NOT NULL
+      )
+    ''');
+
+    // Tabel daftar spesies kustom
+    await db.execute('''
+      CREATE TABLE species_list (
+        nama TEXT PRIMARY KEY
       )
     ''');
 
@@ -434,6 +448,43 @@ class DatabaseHelper {
       'app_users',
       where: 'id = ?',
       whereArgs: [userId],
+    );
+    return count > 0;
+  }
+
+  // =========================================================
+  // MANAJEMEN SPESIES
+  // =========================================================
+
+  /// Ambil semua spesies kustom dari SQLite
+  Future<List<String>> getAllSpesies() async {
+    final db = await database;
+    final result = await db.query('species_list', orderBy: 'nama ASC');
+    return result.map((r) => r['nama'] as String).toList();
+  }
+
+  /// Tambah spesies baru — return false jika sudah ada
+  Future<bool> insertSpesies(String nama) async {
+    try {
+      final db = await database;
+      await db.insert(
+        'species_list',
+        {'nama': nama},
+        conflictAlgorithm: ConflictAlgorithm.abort,
+      );
+      return true;
+    } catch (_) {
+      return false; // sudah ada (PRIMARY KEY conflict)
+    }
+  }
+
+  /// Hapus spesies dari SQLite
+  Future<bool> deleteSpesies(String nama) async {
+    final db = await database;
+    final count = await db.delete(
+      'species_list',
+      where: 'nama = ?',
+      whereArgs: [nama],
     );
     return count > 0;
   }

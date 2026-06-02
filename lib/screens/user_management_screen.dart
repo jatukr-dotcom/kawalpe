@@ -42,79 +42,92 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setDialogState) => AlertDialog(
           title: const Text('Tambah Pengguna Baru'),
-          content: SingleChildScrollView(
-            child: Form(
-              key: formKey,
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  TextFormField(
-                    controller: namaCtrl,
-                    decoration: const InputDecoration(
-                      labelText: 'Nama Lengkap',
-                      prefixIcon: Icon(Icons.person_outline),
-                    ),
-                    textCapitalization: TextCapitalization.words,
-                    validator: (v) => v == null || v.trim().isEmpty
-                        ? 'Wajib diisi'
-                        : null,
-                  ),
-                  const SizedBox(height: 12),
-                  TextFormField(
-                    controller: usernameCtrl,
-                    decoration: const InputDecoration(
-                      labelText: 'Username',
-                      prefixIcon: Icon(Icons.badge_outlined),
-                      helperText: 'Tanpa spasi, huruf kecil',
-                    ),
-                    autocorrect: false,
-                    validator: (v) {
-                      if (v == null || v.trim().isEmpty) return 'Wajib diisi';
-                      if (v.contains(' ')) return 'Tanpa spasi';
-                      return null;
-                    },
-                  ),
-                  const SizedBox(height: 12),
-                  TextFormField(
-                    controller: passwordCtrl,
-                    obscureText: !showPass,
-                    decoration: InputDecoration(
-                      labelText: 'Password',
-                      prefixIcon: const Icon(Icons.lock_outline),
-                      suffixIcon: IconButton(
-                        icon: Icon(
-                          showPass ? Icons.visibility_off : Icons.visibility),
-                        onPressed: () =>
-                            setDialogState(() => showPass = !showPass),
+          contentPadding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
+          content: SizedBox(
+            width: double.maxFinite,
+            child: SingleChildScrollView(
+              child: Form(
+                key: formKey,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    TextFormField(
+                      controller: namaCtrl,
+                      decoration: const InputDecoration(
+                        labelText: 'Nama Lengkap',
+                        prefixIcon: Icon(Icons.person_outline),
+                        isDense: true,
                       ),
+                      textCapitalization: TextCapitalization.words,
+                      validator: (v) => v == null || v.trim().isEmpty
+                          ? 'Wajib diisi'
+                          : null,
                     ),
-                    validator: (v) {
-                      if (v == null || v.isEmpty) return 'Wajib diisi';
-                      if (v.length < 6) return 'Minimal 6 karakter';
-                      return null;
-                    },
-                  ),
-                  const SizedBox(height: 12),
-                  DropdownButtonFormField<String>(
-                    value: role,
-                    decoration: const InputDecoration(
-                      labelText: 'Role',
-                      prefixIcon: Icon(Icons.admin_panel_settings_outlined),
+                    const SizedBox(height: 12),
+                    TextFormField(
+                      controller: usernameCtrl,
+                      decoration: const InputDecoration(
+                        labelText: 'Username',
+                        prefixIcon: Icon(Icons.badge_outlined),
+                        helperText: 'Tanpa spasi, huruf kecil',
+                        isDense: true,
+                      ),
+                      autocorrect: false,
+                      validator: (v) {
+                        if (v == null || v.trim().isEmpty) return 'Wajib diisi';
+                        if (v.contains(' ')) return 'Tanpa spasi';
+                        return null;
+                      },
                     ),
-                    items: const [
-                      DropdownMenuItem(
-                        value: 'user',
-                        child: Text('User — Petugas Lapangan'),
+                    const SizedBox(height: 12),
+                    TextFormField(
+                      controller: passwordCtrl,
+                      obscureText: !showPass,
+                      decoration: InputDecoration(
+                        labelText: 'Password',
+                        prefixIcon: const Icon(Icons.lock_outline),
+                        isDense: true,
+                        suffixIcon: IconButton(
+                          icon: Icon(showPass
+                              ? Icons.visibility_off
+                              : Icons.visibility),
+                          onPressed: () =>
+                              setDialogState(() => showPass = !showPass),
+                        ),
                       ),
-                      DropdownMenuItem(
-                        value: 'admin',
-                        child: Text('Admin — Pengelola'),
+                      validator: (v) {
+                        if (v == null || v.isEmpty) return 'Wajib diisi';
+                        if (v.length < 6) return 'Minimal 6 karakter';
+                        return null;
+                      },
+                    ),
+                    const SizedBox(height: 12),
+                    // Role dropdown — tanpa prefixIcon agar tidak overflow
+                    DropdownButtonFormField<String>(
+                      value: role,
+                      decoration: const InputDecoration(
+                        labelText: 'Role / Jabatan',
+                        isDense: true,
                       ),
-                    ],
-                    onChanged: (v) =>
-                        setDialogState(() => role = v ?? 'user'),
-                  ),
-                ],
+                      isExpanded: true,
+                      items: const [
+                        DropdownMenuItem(
+                          value: 'user',
+                          child: Text('User  —  Petugas Lapangan',
+                              overflow: TextOverflow.ellipsis),
+                        ),
+                        DropdownMenuItem(
+                          value: 'admin',
+                          child: Text('Admin  —  Pengelola',
+                              overflow: TextOverflow.ellipsis),
+                        ),
+                      ],
+                      onChanged: (v) =>
+                          setDialogState(() => role = v ?? 'user'),
+                    ),
+                    const SizedBox(height: 4),
+                  ],
+                ),
               ),
             ),
           ),
@@ -313,10 +326,13 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
                         ),
                         title: Row(
                           children: [
-                            Text(
-                              user.nama,
-                              style: const TextStyle(
-                                  fontWeight: FontWeight.bold),
+                            Flexible(
+                              child: Text(
+                                user.nama,
+                                style: const TextStyle(
+                                    fontWeight: FontWeight.bold),
+                                overflow: TextOverflow.ellipsis,
+                              ),
                             ),
                             if (isSelf) ...[
                               const SizedBox(width: 6),
