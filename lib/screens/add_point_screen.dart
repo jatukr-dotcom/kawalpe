@@ -14,6 +14,7 @@ import '../models/project.dart';
 import '../models/planting_point.dart';
 import '../services/gps_service.dart';
 import '../services/camera_service.dart';
+import '../services/species_service.dart';
 import '../widgets/gps_accuracy_meter.dart';
 import 'gps_calibration_screen.dart';
 
@@ -53,8 +54,11 @@ class _AddPointScreenState extends State<AddPointScreen> {
 
   // Form
   String? _selectedSpesies;
-  String _kondisi = 'Baik';
+  String _kondisi = 'Sehat'; // default kondisi baru
   final _catatanController = TextEditingController();
+
+  // Daftar spesies dari SQLite (dinamis)
+  List<String> _daftarSpesies = [];
 
   // Info device
   String _deviceId = '';
@@ -69,15 +73,23 @@ class _AddPointScreenState extends State<AddPointScreen> {
   void initState() {
     super.initState();
     _loadDeviceInfo();
+    _loadSpesies(); // Load daftar spesies dari SQLite
     _startGps();
   }
 
   Future<void> _loadDeviceInfo() async {
     final prefs = await SharedPreferences.getInstance();
-    setState(() {
-      _deviceId = prefs.getString('device_id') ?? const Uuid().v4();
-      _deviceName = prefs.getString('device_name') ?? 'HP Tidak Dikenal';
-    });
+    if (mounted) {
+      setState(() {
+        _deviceId = prefs.getString('device_id') ?? const Uuid().v4();
+        _deviceName = prefs.getString('device_name') ?? 'HP Tidak Dikenal';
+      });
+    }
+  }
+
+  Future<void> _loadSpesies() async {
+    final list = await SpeciesService().getDaftarSpesies();
+    if (mounted) setState(() => _daftarSpesies = list);
   }
 
   Future<void> _startGps() async {
@@ -726,45 +738,56 @@ class _AddPointScreenState extends State<AddPointScreen> {
             ),
             const SizedBox(height: 16),
 
-            // Dropdown Spesies
+            // Dropdown Spesies — dari SQLite (dinamis)
             const Text('Spesies *', style: TextStyle(fontWeight: FontWeight.bold)),
             const SizedBox(height: 8),
-            DropdownButtonFormField<String>(
-              value: _selectedSpesies,
-              decoration: const InputDecoration(
-                hintText: 'Pilih spesies mangrove',
-                prefixIcon: Icon(Icons.park),
-              ),
-              items: kDaftarSpesies.map((spesies) {
-                return DropdownMenuItem(
-                  value: spesies,
-                  child: Text(
-                    spesies,
-                    style: const TextStyle(fontSize: 14),
-                    overflow: TextOverflow.ellipsis,
+            _daftarSpesies.isEmpty
+                ? const Center(
+                    child: Padding(
+                      padding: EdgeInsets.symmetric(vertical: 12),
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    ),
+                  )
+                : DropdownButtonFormField<String>(
+                    value: _selectedSpesies,
+                    isExpanded: true,
+                    decoration: const InputDecoration(
+                      hintText: 'Pilih spesies mangrove',
+                      prefixIcon: Icon(Icons.park),
+                    ),
+                    items: _daftarSpesies.map((spesies) {
+                      return DropdownMenuItem(
+                        value: spesies,
+                        child: Text(
+                          spesies,
+                          style: const TextStyle(fontSize: 14),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      );
+                    }).toList(),
+                    onChanged: (val) => setState(() => _selectedSpesies = val),
+                    validator: (val) =>
+                        val == null ? 'Pilih spesies tanaman' : null,
                   ),
-                );
-              }).toList(),
-              onChanged: (val) => setState(() => _selectedSpesies = val),
-              validator: (val) =>
-                  val == null ? 'Pilih spesies tanaman' : null,
-            ),
             const SizedBox(height: 16),
 
-            // RadioButton Kondisi
+            // Pilihan Kondisi Tanaman
             const Text('Kondisi *', style: TextStyle(fontWeight: FontWeight.bold)),
             const SizedBox(height: 8),
             Row(
               children: kDaftarKondisi.map((kondisi) {
-                Color kondisiColor;
-                switch (kondisi) {
-                  case 'Baik':
-                    kondisiColor = Colors.green;
-                  case 'Sedang':
-                    kondisiColor = Colors.orange;
-                  default:
-                    kondisiColor = Colors.red;
-                }
+                final Map<String, Color> colors = {
+                  'Sehat': const Color(0xFF2E7D32),
+                  'Merana': const Color(0xFFF57F17),
+                  'Mati': const Color(0xFFB71C1C),
+                };
+                final Map<String, IconData> icons = {
+                  'Sehat': Icons.eco,
+                  'Merana': Icons.warning_amber,
+                  'Mati': Icons.cancel,
+                };
+                final color = colors[kondisi] ?? Colors.grey;
+                final isSelected = _kondisi == kondisi;
 
                 return Expanded(
                   child: GestureDetector(
@@ -774,25 +797,33 @@ class _AddPointScreenState extends State<AddPointScreen> {
                       margin: const EdgeInsets.symmetric(horizontal: 4),
                       padding: const EdgeInsets.symmetric(vertical: 10),
                       decoration: BoxDecoration(
-                        color: _kondisi == kondisi
-                            ? kondisiColor
-                            : kondisiColor.withOpacity(0.1),
+                        color: isSelected
+                            ? color
+                            : color.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(10),
                         border: Border.all(
-                          color: kondisiColor,
-                          width: _kondisi == kondisi ? 2 : 1,
+                          color: color,
+                          width: isSelected ? 2 : 1,
                         ),
                       ),
-                      child: Text(
-                        kondisi,
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 14,
-                          color: _kondisi == kondisi
-                              ? Colors.white
-                              : kondisiColor,
-                        ),
+                      child: Column(
+                        children: [
+                          Icon(
+                            icons[kondisi],
+                            size: 20,
+                            color: isSelected ? Colors.white : color,
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            kondisi,
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 13,
+                              color: isSelected ? Colors.white : color,
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                   ),

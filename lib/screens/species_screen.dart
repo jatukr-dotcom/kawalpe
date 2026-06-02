@@ -4,6 +4,7 @@
 import 'package:flutter/material.dart';
 import '../services/species_service.dart';
 import '../services/sync_service.dart';
+import '../services/auth_service.dart';
 
 class SpeciesScreen extends StatefulWidget {
   const SpeciesScreen({super.key});
@@ -19,6 +20,8 @@ class _SpeciesScreenState extends State<SpeciesScreen> {
   List<String> _daftar = [];
   bool _loading = true;
   bool _syncing = false;
+
+  bool get _isAdmin => AuthService().isAdmin;
 
   @override
   void initState() {
@@ -163,49 +166,69 @@ class _SpeciesScreenState extends State<SpeciesScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  // Form tambah spesies baru
-                  Material(
-                    color: Colors.white,
-                    elevation: 1,
-                    child: Padding(
-                      padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
-                      child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.center,
-                        children: [
-                          Expanded(
-                            child: TextField(
-                              controller: _controller,
-                              decoration: InputDecoration(
-                                labelText: 'Nama spesies baru',
-                                hintText: 'Contoh: Ceriops tagal',
-                                prefixIcon: const Icon(Icons.local_florist),
-                                isDense: false,
-                                border: OutlineInputBorder(
+                  // Form tambah spesies baru (HANYA ADMIN)
+                  if (_isAdmin)
+                    Material(
+                      color: Colors.white,
+                      elevation: 1,
+                      child: Padding(
+                        padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.center,
+                          children: [
+                            Expanded(
+                              child: TextField(
+                                controller: _controller,
+                                decoration: InputDecoration(
+                                  labelText: 'Nama spesies baru',
+                                  hintText: 'Contoh: Ceriops tagal',
+                                  prefixIcon: const Icon(Icons.local_florist),
+                                  isDense: false,
+                                  border: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  contentPadding: const EdgeInsets.symmetric(
+                                      horizontal: 12, vertical: 14),
+                                ),
+                                textCapitalization: TextCapitalization.sentences,
+                                onSubmitted: (_) => _tambah(),
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            ElevatedButton(
+                              onPressed: _tambah,
+                              style: ElevatedButton.styleFrom(
+                                minimumSize: const Size(52, 52),
+                                shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(12),
                                 ),
-                                contentPadding: const EdgeInsets.symmetric(
-                                    horizontal: 12, vertical: 14),
+                                padding: EdgeInsets.zero,
                               ),
-                              textCapitalization: TextCapitalization.sentences,
-                              onSubmitted: (_) => _tambah(),
+                              child: const Icon(Icons.add, size: 24),
                             ),
-                          ),
-                          const SizedBox(width: 8),
-                          ElevatedButton(
-                            onPressed: _tambah,
-                            style: ElevatedButton.styleFrom(
-                              minimumSize: const Size(52, 52),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              padding: EdgeInsets.zero,
-                            ),
-                            child: const Icon(Icons.add, size: 24),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
+                    )
+                  else
+                    // Banner info untuk user biasa
+                    Container(
+                      color: Colors.blue.shade50,
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 16, vertical: 10),
+                      child: const Row(children: [
+                        Icon(Icons.info_outline,
+                            size: 16, color: Colors.blue),
+                        SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            'Hanya Admin yang dapat menambah atau menghapus spesies.',
+                            style:
+                                TextStyle(fontSize: 12, color: Colors.blue),
+                          ),
+                        ),
+                      ]),
                     ),
-                  ),
                   const Divider(height: 1),
 
                   // Keterangan jumlah spesies
@@ -259,15 +282,18 @@ class _SpeciesScreenState extends State<SpeciesScreen> {
                               : const Text('Ditambahkan manual',
                                   style: TextStyle(
                                       fontSize: 11, color: Colors.blue)),
+                          // Trailing: kunci (default), hapus (admin+kustom), atau kosong
                           trailing: isDefault
                               ? const Icon(Icons.lock_outline,
                                   size: 16, color: Colors.grey)
-                              : IconButton(
-                                  icon: const Icon(Icons.delete_outline,
-                                      color: Colors.red),
-                                  onPressed: () => _hapus(spesies),
-                                  tooltip: 'Hapus',
-                                ),
+                              : (_isAdmin
+                                  ? IconButton(
+                                      icon: const Icon(Icons.delete_outline,
+                                          color: Colors.red),
+                                      onPressed: () => _hapus(spesies),
+                                      tooltip: 'Hapus',
+                                    )
+                                  : null),
                         );
                       },
                     ),
