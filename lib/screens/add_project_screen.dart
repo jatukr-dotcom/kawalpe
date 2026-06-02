@@ -24,6 +24,7 @@ class _AddProjectScreenState extends State<AddProjectScreen> {
   final _namaController = TextEditingController();
   final _lokasiController = TextEditingController();
   final _deskripsiController = TextEditingController();
+  final _pjController = TextEditingController(); // Penanggung Jawab
 
   final DatabaseHelper _db = DatabaseHelper();
   final SyncService _syncService = SyncService();
@@ -47,6 +48,7 @@ class _AddProjectScreenState extends State<AddProjectScreen> {
     _namaController.dispose();
     _lokasiController.dispose();
     _deskripsiController.dispose();
+    _pjController.dispose();
     super.dispose();
   }
 
@@ -109,6 +111,9 @@ class _AddProjectScreenState extends State<AddProjectScreen> {
         deskripsi: _deskripsiController.text.trim().isEmpty
             ? null
             : _deskripsiController.text.trim(),
+        penanggungjawab: _pjController.text.trim().isEmpty
+            ? null
+            : _pjController.text.trim(),
         tanggalMulai: DateFormat('yyyy-MM-dd').format(_tanggalMulai),
         tanggalSelesai: _tanggalSelesai != null
             ? DateFormat('yyyy-MM-dd').format(_tanggalSelesai!)
@@ -244,7 +249,24 @@ class _AddProjectScreenState extends State<AddProjectScreen> {
               ),
               const SizedBox(height: 16),
 
-              // Tanggal Mulai
+              // Penanggung Jawab (opsional)
+              const Text(
+                'Penanggung Jawab (opsional)',
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 8),
+              TextFormField(
+                controller: _pjController,
+                decoration: const InputDecoration(
+                  hintText: 'Contoh: KTH Tunas Mangrove Karya',
+                  prefixIcon: Icon(Icons.groups),
+                  helperText: 'Nama kelompok tani hutan atau penanggung jawab',
+                ),
+                textCapitalization: TextCapitalization.words,
+                maxLength: 100,
+              ),
+              const SizedBox(height: 8),
+
               const Text(
                 'Tanggal Mulai *',
                 style: TextStyle(fontWeight: FontWeight.bold),

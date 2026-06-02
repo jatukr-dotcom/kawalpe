@@ -26,13 +26,23 @@ class DatabaseHelper {
 
     return await openDatabase(
       path,
-      version: 1,
+      version: 2,
       onCreate: _onCreate,
+      onUpgrade: _onUpgrade,
       onConfigure: (db) async {
-        // Aktifkan foreign key constraint
         await db.execute('PRAGMA foreign_keys = ON');
       },
     );
+  }
+
+  /// Migrasi database antar versi
+  Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
+    if (oldVersion < 2) {
+      // Tambah kolom penanggungjawab ke tabel projects
+      await db.execute(
+        'ALTER TABLE projects ADD COLUMN penanggungjawab TEXT'
+      );
+    }
   }
 
   /// Buat tabel saat pertama kali membuka database

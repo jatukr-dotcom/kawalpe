@@ -114,7 +114,7 @@ const List<String> kDaftarSpesies = [
 ];
 
 /// Daftar kondisi tanaman
-const List<String> kDaftarKondisi = ['Baik', 'Sedang', 'Buruk'];
+const List<String> kDaftarKondisi = ['Sehat', 'Merana', 'Mati'];
 
 /// Hasil operasi sync
 class SyncResult {
