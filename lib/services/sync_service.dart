@@ -158,7 +158,22 @@ class SyncService {
           onConflict: 'id', // Gunakan upsert untuk handle duplikat
         );
 
-        // 4. Update status lokal
+        // 4. Baca kembali nomor_titik yang di-assign Supabase
+        try {
+          final returned = await client
+              .from('planting_points')
+              .select('nomor_titik')
+              .eq('id', point.id)
+              .maybeSingle();
+          final nomor = returned?['nomor_titik'] as int?;
+          if (nomor != null) {
+            await _db.updateNomorTitik(point.id, nomor);
+          }
+        } catch (_) {
+          // Gagal baca nomor_titik tidak fatal — sync tetap berhasil
+        }
+
+        // 5. Update status lokal
         await _db.markPointSynced(point.id, fotoCloudUrl: fotoCloudUrl);
         successCount++;
         debugPrint('SyncService: Titik ${point.id} berhasil di-sync');

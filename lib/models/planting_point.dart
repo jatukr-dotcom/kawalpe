@@ -15,6 +15,7 @@ class PlantingPoint {
   String? fotoCloudUrl;
   final String deviceId;
   final String? recordedBy;    // Username petugas yang merekam
+  final int? nomorTitik;       // Nomor urut global dari Supabase (null = belum sync)
   final String timestamp;      // ISO 8601
   bool synced;
   int syncAttempt;
@@ -32,6 +33,7 @@ class PlantingPoint {
     this.fotoCloudUrl,
     required this.deviceId,
     this.recordedBy,
+    this.nomorTitik,
     required this.timestamp,
     this.synced = false,
     this.syncAttempt = 0,
@@ -52,6 +54,7 @@ class PlantingPoint {
       fotoCloudUrl: map['foto_cloud_url'] as String?,
       deviceId: map['device_id'] as String,
       recordedBy: map['recorded_by'] as String?,
+      nomorTitik: map['nomor_titik'] as int?,
       timestamp: map['timestamp'] as String,
       synced: (map['synced'] as int? ?? 0) == 1,
       syncAttempt: map['sync_attempt'] as int? ?? 0,
@@ -73,6 +76,7 @@ class PlantingPoint {
       'foto_cloud_url': fotoCloudUrl,
       'device_id': deviceId,
       'recorded_by': recordedBy,
+      'nomor_titik': nomorTitik,
       'timestamp': timestamp,
       'synced': synced ? 1 : 0,
       'sync_attempt': syncAttempt,

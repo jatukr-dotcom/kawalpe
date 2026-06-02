@@ -27,7 +27,7 @@ class DatabaseHelper {
 
     return await openDatabase(
       path,
-      version: 6,
+      version: 7,
       onCreate: _onCreate,
       onUpgrade: _onUpgrade,
       onConfigure: (db) async {
@@ -73,6 +73,12 @@ class DatabaseHelper {
         'ALTER TABLE projects ADD COLUMN jenis_lahan TEXT',
       );
     }
+    if (oldVersion < 7) {
+      // Nomor urut global dari Supabase (diisi setelah sync berhasil)
+      await db.execute(
+        'ALTER TABLE planting_points ADD COLUMN nomor_titik INTEGER',
+      );
+    }
   }
 
   /// Buat tabel saat pertama kali membuka database
@@ -109,6 +115,7 @@ class DatabaseHelper {
         foto_cloud_url  TEXT,
         device_id       TEXT NOT NULL,
         recorded_by     TEXT,
+        nomor_titik     INTEGER,
         timestamp       TEXT NOT NULL,
         synced          INTEGER DEFAULT 0,
         sync_attempt    INTEGER DEFAULT 0,
@@ -310,6 +317,17 @@ class DatabaseHelper {
     await db.rawUpdate(
       'UPDATE planting_points SET sync_attempt = sync_attempt + 1 WHERE id = ?',
       [pointId],
+    );
+  }
+
+  /// Simpan nomor urut global (dari Supabase) ke lokal
+  Future<void> updateNomorTitik(String pointId, int nomorTitik) async {
+    final db = await database;
+    await db.update(
+      'planting_points',
+      {'nomor_titik': nomorTitik},
+      where: 'id = ?',
+      whereArgs: [pointId],
     );
   }
 

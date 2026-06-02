@@ -224,6 +224,14 @@ class _DetailScreenState extends State<DetailScreen> {
                   // Metadata rekaman
                   _buildSectionTitle('Informasi Rekaman'),
                   _buildInfoCard([
+                    // Nomor urut global
+                    _buildInfoRow(
+                      Icons.tag,
+                      'No. Pohon',
+                      _point.nomorTitik != null
+                          ? '#${_point.nomorTitik}'
+                          : '— (belum sync)',
+                    ),
                     _buildInfoRow(Icons.access_time, 'Waktu',
                         _formatTimestamp(_point.timestamp)),
                     // Nama petugas pengisi

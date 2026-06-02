@@ -354,13 +354,40 @@ class _ProjectScreenState extends State<ProjectScreen> {
           ),
         ),
         leading: _buildThumbnail(point),
-        title: Text(
-          point.koordinatSingkat,
-          style: const TextStyle(
-            fontSize: 14,
-            fontWeight: FontWeight.bold,
-            fontFamily: 'monospace',
-          ),
+        title: Row(
+          children: [
+            // Nomor pohon global
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+              decoration: BoxDecoration(
+                color: point.nomorTitik != null
+                    ? const Color(0xFF1B5E20).withOpacity(0.12)
+                    : Colors.grey.shade100,
+                borderRadius: BorderRadius.circular(6),
+              ),
+              child: Text(
+                point.nomorTitik != null ? '#${point.nomorTitik}' : '—',
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.bold,
+                  color: point.nomorTitik != null
+                      ? const Color(0xFF1B5E20)
+                      : Colors.grey,
+                ),
+              ),
+            ),
+            const SizedBox(width: 6),
+            Expanded(
+              child: Text(
+                point.koordinatSingkat,
+                style: const TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.bold,
+                  fontFamily: 'monospace',
+                ),
+              ),
+            ),
+          ],
         ),
         subtitle: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
