@@ -27,7 +27,7 @@ class DatabaseHelper {
 
     return await openDatabase(
       path,
-      version: 5,
+      version: 6,
       onCreate: _onCreate,
       onUpgrade: _onUpgrade,
       onConfigure: (db) async {
@@ -67,6 +67,12 @@ class DatabaseHelper {
         'ALTER TABLE planting_points ADD COLUMN recorded_by TEXT',
       );
     }
+    if (oldVersion < 6) {
+      // Tambah kolom jenis_lahan ke tabel projects
+      await db.execute(
+        'ALTER TABLE projects ADD COLUMN jenis_lahan TEXT',
+      );
+    }
   }
 
   /// Buat tabel saat pertama kali membuka database
@@ -79,6 +85,7 @@ class DatabaseHelper {
         lokasi            TEXT NOT NULL,
         deskripsi         TEXT,
         penanggungjawab   TEXT,
+        jenis_lahan       TEXT,
         tanggal_mulai     TEXT NOT NULL,
         tanggal_selesai   TEXT,
         created_by_device TEXT NOT NULL,

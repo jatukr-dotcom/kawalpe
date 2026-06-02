@@ -31,6 +31,7 @@ class _AddProjectScreenState extends State<AddProjectScreen> {
 
   DateTime _tanggalMulai = DateTime.now();
   DateTime? _tanggalSelesai;
+  String? _jenisLahan; // 'Tambak', 'Pesisir', 'Terestrial'
   bool _isSaving = false;
   bool _localeReady = false;
 
@@ -114,6 +115,7 @@ class _AddProjectScreenState extends State<AddProjectScreen> {
         penanggungjawab: _pjController.text.trim().isEmpty
             ? null
             : _pjController.text.trim(),
+        jenisLahan: _jenisLahan,
         tanggalMulai: DateFormat('yyyy-MM-dd').format(_tanggalMulai),
         tanggalSelesai: _tanggalSelesai != null
             ? DateFormat('yyyy-MM-dd').format(_tanggalSelesai!)
@@ -266,6 +268,45 @@ class _AddProjectScreenState extends State<AddProjectScreen> {
                 maxLength: 100,
               ),
               const SizedBox(height: 8),
+
+              // Jenis Lahan Penanaman (opsional)
+              const Text(
+                'Jenis Lahan Penanaman (opsional)',
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 8),
+              DropdownButtonFormField<String>(
+                value: _jenisLahan,
+                decoration: const InputDecoration(
+                  prefixIcon: Icon(Icons.landscape),
+                  hintText: 'Pilih jenis lahan',
+                ),
+                items: const [
+                  DropdownMenuItem(
+                    value: 'Tambak',
+                    child: Row(children: [
+                      Text('🐟  '),
+                      Text('Tambak'),
+                    ]),
+                  ),
+                  DropdownMenuItem(
+                    value: 'Pesisir',
+                    child: Row(children: [
+                      Text('🌊  '),
+                      Text('Pesisir'),
+                    ]),
+                  ),
+                  DropdownMenuItem(
+                    value: 'Terestrial',
+                    child: Row(children: [
+                      Text('🌳  '),
+                      Text('Terestrial (Daratan)'),
+                    ]),
+                  ),
+                ],
+                onChanged: (val) => setState(() => _jenisLahan = val),
+              ),
+              const SizedBox(height: 16),
 
               const Text(
                 'Tanggal Mulai *',

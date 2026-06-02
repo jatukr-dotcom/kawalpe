@@ -8,6 +8,7 @@ class Project {
   final String lokasi;
   final String? deskripsi;
   final String? penanggungjawab; // Nama kelompok tani / penanggung jawab
+  final String? jenisLahan;      // 'Tambak', 'Pesisir', 'Terestrial'
   final String tanggalMulai;
   final String? tanggalSelesai;
   final String createdByDevice;  // device_id HP yang membuat proyek
@@ -22,6 +23,7 @@ class Project {
     required this.lokasi,
     this.deskripsi,
     this.penanggungjawab,
+    this.jenisLahan,
     required this.tanggalMulai,
     this.tanggalSelesai,
     required this.createdByDevice,
@@ -39,6 +41,7 @@ class Project {
       lokasi: map['lokasi'] as String,
       deskripsi: map['deskripsi'] as String?,
       penanggungjawab: map['penanggungjawab'] as String?,
+      jenisLahan: map['jenis_lahan'] as String?,
       tanggalMulai: map['tanggal_mulai'] as String,
       tanggalSelesai: map['tanggal_selesai'] as String?,
       createdByDevice: map['created_by_device'] as String,
@@ -57,6 +60,7 @@ class Project {
       lokasi: map['lokasi'] as String,
       deskripsi: map['deskripsi'] as String?,
       penanggungjawab: map['penanggungjawab'] as String?,
+      jenisLahan: map['jenis_lahan'] as String?,
       tanggalMulai: map['tanggal_mulai'] as String,
       tanggalSelesai: map['tanggal_selesai'] as String?,
       createdByDevice: map['created_by_device'] as String,
@@ -73,6 +77,7 @@ class Project {
       'lokasi': lokasi,
       'deskripsi': deskripsi,
       'penanggungjawab': penanggungjawab,
+      'jenis_lahan': jenisLahan,
       'tanggal_mulai': tanggalMulai,
       'tanggal_selesai': tanggalSelesai,
       'created_by_device': createdByDevice,
@@ -89,6 +94,7 @@ class Project {
       'lokasi': lokasi,
       'deskripsi': deskripsi,
       'penanggungjawab': penanggungjawab,
+      'jenis_lahan': jenisLahan,
       'tanggal_mulai': tanggalMulai,
       'tanggal_selesai': tanggalSelesai,
       'created_by_device': createdByDevice,
@@ -103,6 +109,7 @@ class Project {
     String? lokasi,
     String? deskripsi,
     String? penanggungjawab,
+    String? jenisLahan,
     String? tanggalMulai,
     String? tanggalSelesai,
     String? createdByDevice,
@@ -117,6 +124,7 @@ class Project {
       lokasi: lokasi ?? this.lokasi,
       deskripsi: deskripsi ?? this.deskripsi,
       penanggungjawab: penanggungjawab ?? this.penanggungjawab,
+      jenisLahan: jenisLahan ?? this.jenisLahan,
       tanggalMulai: tanggalMulai ?? this.tanggalMulai,
       tanggalSelesai: tanggalSelesai ?? this.tanggalSelesai,
       createdByDevice: createdByDevice ?? this.createdByDevice,
