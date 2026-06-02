@@ -1,10 +1,2 @@
-allprojects {
-    repositories {
-        google()
-        mavenCentral()
-    }
-}
-
-tasks.register("clean", Delete) {
-    delete rootProject.buildDir
-}
+// Konfigurasi dipindah ke build.gradle.kts
+// File ini dikosongkan untuk menghindari konflik Groovy vs Kotlin DSL
