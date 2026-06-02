@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:intl/date_symbol_data_local.dart';
 
 import 'screens/home_screen.dart';
 
@@ -22,6 +23,9 @@ void main() async {
     DeviceOrientation.portraitUp,
     DeviceOrientation.portraitDown,
   ]);
+
+  // Inisialisasi locale Indonesia untuk format tanggal
+  await initializeDateFormatting('id_ID', null);
 
   // Inisialisasi Supabase dari settings tersimpan
   await _initSupabase();
