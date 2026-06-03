@@ -388,8 +388,10 @@ class _LoginScreenState extends State<LoginScreen> {
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       const Text(
-                        'Pilih akun untuk reset passwordnya:',
-                        style: TextStyle(fontSize: 13, color: Colors.grey),
+                        'Daftar akun di perangkat ini.
+'Reset password' hanya tersedia untuk akun petugas.
+Untuk reset password admin, hubungi pengelola sistem.',
+                        style: TextStyle(fontSize: 12, color: Colors.grey),
                       ),
                       const SizedBox(height: 12),
                       ...users.map((u) => Card(
@@ -412,18 +414,27 @@ class _LoginScreenState extends State<LoginScreen> {
                                       fontWeight: FontWeight.bold,
                                       fontSize: 14)),
                               subtitle: Text(
-                                '@${u.username} • ${u.role}',
+                                '@${u.username} • ${u.role == 'admin' ? '🔒 Admin' : 'Petugas'}',
                                 style: const TextStyle(fontSize: 12),
                               ),
-                              trailing: IconButton(
-                                icon: const Icon(Icons.lock_reset,
-                                    color: Colors.orange),
-                                tooltip: 'Reset Password',
-                                onPressed: () {
-                                  Navigator.pop(ctx);
-                                  _showResetPasswordDialog(u.username, u.nama);
-                                },
-                              ),
+                              // Admin: tidak boleh direset dari sini
+                              trailing: u.role == 'admin'
+                                  ? const Tooltip(
+                                      message:
+                                          'Reset admin hanya via pengelola sistem',
+                                      child: Icon(Icons.lock,
+                                          color: Colors.grey, size: 20),
+                                    )
+                                  : IconButton(
+                                      icon: const Icon(Icons.lock_reset,
+                                          color: Colors.orange),
+                                      tooltip: 'Reset Password Petugas',
+                                      onPressed: () {
+                                        Navigator.pop(ctx);
+                                        _showResetPasswordDialog(
+                                            u.username, u.nama);
+                                      },
+                                    ),
                             ),
                           )),
                     ],
