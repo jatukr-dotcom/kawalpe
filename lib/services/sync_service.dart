@@ -175,6 +175,13 @@ class SyncService {
 
         // 5. Update status lokal
         await _db.markPointSynced(point.id, fotoCloudUrl: fotoCloudUrl);
+
+        // 6. Hapus foto lokal setelah berhasil di-upload ke cloud
+        //    Foto sudah aman di Cloudinary — hemat storage HP
+        if (fotoCloudUrl != null && point.fotoLocalPath != null) {
+          await _deleteLocalPhoto(point.fotoLocalPath!);
+        }
+
         successCount++;
         debugPrint('SyncService: Titik ${point.id} berhasil di-sync');
       } catch (e) {
@@ -191,6 +198,31 @@ class SyncService {
       failed: failedCount,
       errorMessages: errors,
     );
+  }
+
+  /// Hapus file foto lokal setelah berhasil diupload ke Cloudinary.
+  /// Menghapus dua file: foto compressed dan foto geotagged (jika ada).
+  Future<void> _deleteLocalPhoto(String localPath) async {
+    try {
+      // Hapus file yang diberikan (biasanya _geotagged.jpg)
+      final file = File(localPath);
+      if (await file.exists()) {
+        await file.delete();
+        debugPrint('SyncService: Foto lokal dihapus → $localPath');
+      }
+
+      // Juga coba hapus versi compressed (tanpa _geotagged suffix)
+      final basePath = localPath.replaceAll('_geotagged.jpg', '.jpg');
+      if (basePath != localPath) {
+        final baseFile = File(basePath);
+        if (await baseFile.exists()) {
+          await baseFile.delete();
+        }
+      }
+    } catch (e) {
+      // Gagal hapus tidak fatal — data sudah aman di cloud
+      debugPrint('SyncService: Gagal hapus foto lokal: $e');
+    }
   }
 
   /// Upload foto ke Cloudinary, kembalikan URL foto

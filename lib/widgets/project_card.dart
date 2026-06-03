@@ -322,11 +322,29 @@ class PointListTile extends StatelessWidget {
   }
 
   Widget _buildThumbnail() {
-    if (point.fotoLocalPath != null) {
+    if (point.fotoLocalPath != null &&
+        File(point.fotoLocalPath!).existsSync()) {
       return ClipRRect(
         borderRadius: BorderRadius.circular(8),
         child: Image.file(
           File(point.fotoLocalPath!),
+          width: 50,
+          height: 50,
+          fit: BoxFit.cover,
+          errorBuilder: (_, __, ___) => _thumbCloud(),
+        ),
+      );
+    }
+    return _thumbCloud();
+  }
+
+  Widget _thumbCloud() {
+    final url = point.fotoCloudUrl;
+    if (url != null && url.isNotEmpty) {
+      return ClipRRect(
+        borderRadius: BorderRadius.circular(8),
+        child: Image.network(
+          url,
           width: 50,
           height: 50,
           fit: BoxFit.cover,

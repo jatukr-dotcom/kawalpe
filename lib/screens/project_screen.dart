@@ -442,11 +442,30 @@ class _ProjectScreenState extends State<ProjectScreen> {
   }
 
   Widget _buildThumbnail(PlantingPoint point) {
-    if (point.fotoLocalPath != null) {
+    // Lokal ada? tampilkan lokal. Sudah dihapus? tampilkan dari cloud
+    if (point.fotoLocalPath != null &&
+        File(point.fotoLocalPath!).existsSync()) {
       return ClipRRect(
         borderRadius: BorderRadius.circular(8),
         child: Image.file(
           File(point.fotoLocalPath!),
+          width: 50,
+          height: 50,
+          fit: BoxFit.cover,
+          errorBuilder: (_, __, ___) =>
+              _thumbCloud(point.fotoCloudUrl),
+        ),
+      );
+    }
+    return _thumbCloud(point.fotoCloudUrl);
+  }
+
+  Widget _thumbCloud(String? url) {
+    if (url != null && url.isNotEmpty) {
+      return ClipRRect(
+        borderRadius: BorderRadius.circular(8),
+        child: Image.network(
+          url,
           width: 50,
           height: 50,
           fit: BoxFit.cover,

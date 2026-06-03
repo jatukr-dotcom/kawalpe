@@ -311,12 +311,37 @@ class _DetailScreenState extends State<DetailScreen> {
   }
 
   Widget _buildFoto() {
-    if (_point.fotoLocalPath != null) {
+    // Prioritas: foto lokal (masih ada) → foto cloud → placeholder
+    final localPath = _point.fotoLocalPath;
+    final cloudUrl = _point.fotoCloudUrl;
+
+    if (localPath != null && File(localPath).existsSync()) {
       return SizedBox(
         width: double.infinity,
         child: Image.file(
-          File(_point.fotoLocalPath!),
+          File(localPath),
           fit: BoxFit.cover,
+          errorBuilder: (_, __, ___) => _buildFotoCloud(cloudUrl),
+        ),
+      );
+    }
+    return _buildFotoCloud(cloudUrl);
+  }
+
+  Widget _buildFotoCloud(String? cloudUrl) {
+    if (cloudUrl != null && cloudUrl.isNotEmpty) {
+      return SizedBox(
+        width: double.infinity,
+        child: Image.network(
+          cloudUrl,
+          fit: BoxFit.cover,
+          loadingBuilder: (_, child, progress) => progress == null
+              ? child
+              : Container(
+                  height: 200,
+                  color: Colors.grey.shade100,
+                  child: const Center(child: CircularProgressIndicator()),
+                ),
           errorBuilder: (_, __, ___) => _buildNoPhoto(),
         ),
       );
