@@ -257,12 +257,17 @@ class _AddPointScreenState extends State<AddPointScreen> {
       return;
     }
 
+    final currentUser = AuthService().currentUser;
+    final namaOperator = currentUser != null
+        ? '${currentUser.nama} (@${currentUser.username})'
+        : _deviceName; // fallback ke nama device jika belum login
+
     final path = await _cameraService.takePhoto(
       latitude: _lockedLat!,
       longitude: _lockedLng!,
       timestamp: DateTime.now(),
       namaProyek: widget.project.namaProyek,
-      namaDevice: _deviceName,
+      namaDevice: namaOperator,
     );
 
     if (path != null && mounted) {

@@ -67,7 +67,7 @@ class GeotagService {
         'GPS: $latStr, $lngStr',
         '${dateFormatter.format(timestamp)} ${timeFormatter.format(timestamp)} WITA',
         'Proyek: $namaProyek',
-        'Device: $namaDevice | Kawal PE v1.0',
+        'Petugas: $namaDevice | Kawal PE v1.0',
       ];
 
       // 5. Hitung font size proporsional terhadap resolusi
