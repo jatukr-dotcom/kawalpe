@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../services/auth_service.dart';
+import '../database/database_helper.dart';
 import 'home_screen.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -334,7 +335,21 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                     ),
 
-                    const SizedBox(height: 24),
+                    const SizedBox(height: 16),
+
+                    // Tombol lupa username/password
+                    if (!_isFirstRun)
+                      TextButton.icon(
+                        onPressed: _showLupaAkunDialog,
+                        icon: const Icon(Icons.help_outline, size: 16,
+                            color: Colors.white60),
+                        label: const Text(
+                          'Lupa Username / Password?',
+                          style: TextStyle(color: Colors.white60, fontSize: 13),
+                        ),
+                      ),
+
+                    const SizedBox(height: 8),
                     const Text(
                       'BKSDA — Sistem Tanam Pemulihan Ekosistem',
                       style: TextStyle(fontSize: 11, color: Colors.white54),
@@ -346,6 +361,179 @@ class _LoginScreenState extends State<LoginScreen> {
             ),
     );
   }
+
+  /// Dialog lihat semua akun + reset password
+  Future<void> _showLupaAkunDialog() async {
+    final db = DatabaseHelper();
+    final users = await db.getAllUsers();
+
+    if (!mounted) return;
+
+    showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDialogState) => AlertDialog(
+          title: const Row(
+            children: [
+              Icon(Icons.manage_accounts, color: Color(0xFF2E7D32)),
+              SizedBox(width: 8),
+              Text('Akun Terdaftar', style: TextStyle(fontSize: 16)),
+            ],
+          ),
+          content: SizedBox(
+            width: double.maxFinite,
+            child: users.isEmpty
+                ? const Text('Tidak ada akun terdaftar.')
+                : Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Text(
+                        'Pilih akun untuk reset passwordnya:',
+                        style: TextStyle(fontSize: 13, color: Colors.grey),
+                      ),
+                      const SizedBox(height: 12),
+                      ...users.map((u) => Card(
+                            child: ListTile(
+                              leading: CircleAvatar(
+                                backgroundColor: u.role == 'admin'
+                                    ? const Color(0xFF2E7D32)
+                                    : Colors.blue,
+                                child: Text(
+                                  u.nama.isNotEmpty
+                                      ? u.nama[0].toUpperCase()
+                                      : '?',
+                                  style: const TextStyle(
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.bold),
+                                ),
+                              ),
+                              title: Text(u.nama,
+                                  style: const TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 14)),
+                              subtitle: Text(
+                                '@${u.username} • ${u.role}',
+                                style: const TextStyle(fontSize: 12),
+                              ),
+                              trailing: IconButton(
+                                icon: const Icon(Icons.lock_reset,
+                                    color: Colors.orange),
+                                tooltip: 'Reset Password',
+                                onPressed: () {
+                                  Navigator.pop(ctx);
+                                  _showResetPasswordDialog(u.username, u.nama);
+                                },
+                              ),
+                            ),
+                          )),
+                    ],
+                  ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('Tutup'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// Dialog reset password untuk satu akun
+  Future<void> _showResetPasswordDialog(
+      String username, String nama) async {
+    final newPassCtrl = TextEditingController();
+    final confirmCtrl = TextEditingController();
+    bool show = false;
+
+    await showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setS) => AlertDialog(
+          title: Text('Reset Password: $nama'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text('@$username',
+                  style: const TextStyle(color: Colors.grey, fontSize: 13)),
+              const SizedBox(height: 16),
+              TextField(
+                controller: newPassCtrl,
+                obscureText: !show,
+                decoration: InputDecoration(
+                  labelText: 'Password Baru',
+                  prefixIcon: const Icon(Icons.lock),
+                  suffixIcon: IconButton(
+                    icon: Icon(show ? Icons.visibility_off : Icons.visibility),
+                    onPressed: () => setS(() => show = !show),
+                  ),
+                  border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10)),
+                ),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: confirmCtrl,
+                obscureText: !show,
+                decoration: InputDecoration(
+                  labelText: 'Konfirmasi Password',
+                  prefixIcon: const Icon(Icons.lock_outline),
+                  border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10)),
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('Batal'),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF2E7D32)),
+              onPressed: () async {
+                if (newPassCtrl.text.trim().length < 4) {
+                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+                    content: Text('Password minimal 4 karakter'),
+                    backgroundColor: Colors.red,
+                  ));
+                  return;
+                }
+                if (newPassCtrl.text != confirmCtrl.text) {
+                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+                    content: Text('Password tidak cocok'),
+                    backgroundColor: Colors.red,
+                  ));
+                  return;
+                }
+                final ok = await _auth.changePassword(
+                  usernameTarget: username,
+                  passwordBaru: newPassCtrl.text.trim(),
+                );
+                if (ctx.mounted) Navigator.pop(ctx);
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                    content: Text(ok
+                        ? '✅ Password @$username berhasil direset!'
+                        : '❌ Gagal reset password'),
+                    backgroundColor: ok ? Colors.green : Colors.red,
+                  ));
+                }
+              },
+              child: const Text('Simpan',
+                  style: TextStyle(color: Colors.white)),
+            ),
+          ],
+        ),
+      ),
+    );
+
+    newPassCtrl.dispose();
+    confirmCtrl.dispose();
+  }
+
 
   InputDecoration _inputDecoration(String label, IconData icon,
       {String? hint}) {
