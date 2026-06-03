@@ -35,3 +35,5 @@ coverage/
 # Generated files
 *.g.dart
 *.freezed.dart
+
+akun.txt
