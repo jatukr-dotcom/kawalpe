@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import '../database/database_helper.dart';
 import '../models/planting_point.dart';
 import '../services/species_service.dart';
+import '../services/sync_service.dart';
 
 class EditPointScreen extends StatefulWidget {
   final PlantingPoint point;
@@ -83,11 +84,27 @@ class _EditPointScreenState extends State<EditPointScreen> {
 
       await _db.updatePoint(updated);
 
+      // Auto-sync ke Supabase jika ada internet
+      String syncMsg = '';
+      final syncService = SyncService();
+      final isOnline = await syncService.isOnline();
+      final isConfigured = await syncService.isConfigured();
+      if (isOnline && isConfigured) {
+        final result = await syncService.pushPoints(
+          projectId: updated.projectId,
+        );
+        syncMsg = result.failed == 0
+            ? ' & tersinkron ke server ☁️'
+            : ' (sync gagal, coba manual)';
+      } else {
+        syncMsg = ' (akan sync saat ada internet)';
+      }
+
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('✅ Data titik berhasil diperbarui'),
-            backgroundColor: Color(0xFF2E7D32),
+          SnackBar(
+            content: Text('✅ Data diperbarui$syncMsg'),
+            backgroundColor: const Color(0xFF2E7D32),
             behavior: SnackBarBehavior.floating,
           ),
         );

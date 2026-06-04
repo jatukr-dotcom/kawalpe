@@ -279,6 +279,11 @@ class _AddPointScreenState extends State<AddPointScreen> {
   Future<void> _simpanTitik() async {
     if (!_formKey.currentState!.validate()) return;
 
+    if (_selectedSpesies == null || _selectedSpesies!.trim().isEmpty) {
+      _showSnackBar('Pilih spesies tanaman terlebih dahulu!', isError: true);
+      return;
+    }
+
     if (!_gpsLocked || _lockedLat == null) {
       _showSnackBar('Kunci koordinat GPS terlebih dahulu!', isError: true);
       return;
