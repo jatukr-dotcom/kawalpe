@@ -110,16 +110,21 @@ class AuthService {
     required String passwordBaru,
   }) async {
     final db = DatabaseHelper();
-    // Ambil user untuk mendapatkan salt-nya
     final user = await db.getUserByUsername(usernameTarget.toLowerCase());
     if (user == null) return false;
 
-    final hash = hashPassword(
-      usernameTarget.toLowerCase(),
-      passwordBaru,
-      salt: user.salt,
-    );
-    return await db.updateUserPassword(usernameTarget.toLowerCase(), hash);
+    // Jika akun lama belum punya salt, generate sekarang saat password direset
+    final salt = user.salt ?? generateSalt();
+    final hash = hashPassword(usernameTarget.toLowerCase(), passwordBaru, salt: salt);
+
+    if (user.salt == null) {
+      // Akun lama: simpan hash baru + salt baru sekaligus
+      return await db.updateUserPasswordAndSalt(
+          usernameTarget.toLowerCase(), hash, salt);
+    } else {
+      // Akun baru: salt sudah ada, cukup update password
+      return await db.updateUserPassword(usernameTarget.toLowerCase(), hash);
+    }
   }
 
   // =========================================================
@@ -180,6 +185,8 @@ class AuthService {
   }
 
   /// Reset password user lain (admin only)
+  /// Setelah reset, salt baru otomatis di-generate untuk akun lama
+  /// dan langsung disync ke Supabase jika online
   Future<bool> adminResetPassword({
     required String username,
     required String passwordBaru,

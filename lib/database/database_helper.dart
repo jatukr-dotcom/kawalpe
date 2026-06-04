@@ -563,7 +563,23 @@ class DatabaseHelper {
     return ((result.first['count'] as int?) ?? 0) > 0;
   }
 
-  /// Update password user
+  /// Update password dan salt user sekaligus
+  Future<bool> updateUserPasswordAndSalt(
+      String username, String passwordHash, String salt) async {
+    final db = await database;
+    final count = await db.update(
+      'app_users',
+      {
+        'password_hash': passwordHash,
+        'salt': salt,
+      },
+      where: 'username = ?',
+      whereArgs: [username],
+    );
+    return count > 0;
+  }
+
+  /// Update password user (tanpa mengubah salt — untuk akun yang sudah punya salt)
   Future<bool> updateUserPassword(String username, String passwordHash) async {
     final db = await database;
     final count = await db.update(

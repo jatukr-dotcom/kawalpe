@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 
 import '../models/app_user.dart';
 import '../services/auth_service.dart';
+import '../services/sync_service.dart';
 
 class UserManagementScreen extends StatefulWidget {
   const UserManagementScreen({super.key});
@@ -15,6 +16,7 @@ class UserManagementScreen extends StatefulWidget {
 
 class _UserManagementScreenState extends State<UserManagementScreen> {
   final _auth = AuthService();
+  final _sync = SyncService();
   List<AppUser> _users = [];
   bool _loading = true;
 
@@ -177,54 +179,72 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
   void _showResetPasswordDialog(AppUser user) {
     final passwordCtrl = TextEditingController();
     final formKey = GlobalKey<FormState>();
+    bool showPass = false;
 
     showDialog(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text('Reset Password — ${user.nama}'),
-        content: Form(
-          key: formKey,
-          child: TextFormField(
-            controller: passwordCtrl,
-            obscureText: true,
-            decoration: const InputDecoration(
-              labelText: 'Password Baru',
-              prefixIcon: Icon(Icons.lock_reset),
-            ),
-            validator: (v) {
-              if (v == null || v.isEmpty) return 'Wajib diisi';
-              if (v.length < 6) return 'Minimal 6 karakter';
-              return null;
-            },
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('Batal'),
-          ),
-          ElevatedButton(
-            onPressed: () async {
-              if (!formKey.currentState!.validate()) return;
-              final ok = await _auth.adminResetPassword(
-                username: user.username,
-                passwordBaru: passwordCtrl.text,
-              );
-              if (ctx.mounted) {
-                Navigator.pop(ctx);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text(ok
-                        ? '✅ Password ${user.nama} berhasil direset'
-                        : 'Gagal reset password'),
-                    backgroundColor: ok ? const Color(0xFF2E7D32) : Colors.red,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDialogState) => AlertDialog(
+          title: Text('Reset Password — ${user.nama}'),
+          content: Form(
+            key: formKey,
+            child: TextFormField(
+              controller: passwordCtrl,
+              obscureText: !showPass,
+              decoration: InputDecoration(
+                labelText: 'Password Baru',
+                prefixIcon: const Icon(Icons.lock_reset),
+                suffixIcon: IconButton(
+                  icon: Icon(
+                    showPass ? Icons.visibility_off : Icons.visibility,
+                    color: Colors.grey,
                   ),
-                );
-              }
-            },
-            child: const Text('Reset'),
+                  onPressed: () =>
+                      setDialogState(() => showPass = !showPass),
+                ),
+              ),
+              validator: (v) {
+                if (v == null || v.isEmpty) return 'Wajib diisi';
+                if (v.length < 6) return 'Minimal 6 karakter';
+                return null;
+              },
+            ),
           ),
-        ],
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('Batal'),
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                if (!formKey.currentState!.validate()) return;
+                final ok = await _auth.adminResetPassword(
+                  username: user.username,
+                  passwordBaru: passwordCtrl.text,
+                );
+                if (ctx.mounted) {
+                  Navigator.pop(ctx);
+                  if (ok) {
+                    await _loadUsers(); // refresh untuk update badge
+                    // Push salt baru ke Supabase jika online
+                    if (await _sync.isOnline()) {
+                      await _sync.pushUsers();
+                    }
+                  }
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(ok
+                          ? '✅ Password ${user.nama} berhasil direset'
+                          : 'Gagal reset password'),
+                      backgroundColor: ok ? const Color(0xFF2E7D32) : Colors.red,
+                    ),
+                  );
+                }
+              },
+              child: const Text('Reset'),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -295,6 +315,36 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
                     ],
                   ),
                 ),
+
+                // Banner peringatan jika ada akun lama yang belum diupgrade
+                if (_users.any((u) => u.salt == null && u.id != currentUserId))
+                  Container(
+                    margin: const EdgeInsets.fromLTRB(12, 0, 12, 8),
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: Colors.orange.shade50,
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: Colors.orange.shade300),
+                    ),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Icon(Icons.warning_amber_rounded,
+                            color: Colors.orange.shade700, size: 18),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            'Beberapa akun berlabel "Perlu Reset" masih menggunakan sistem keamanan lama. '
+                            'Reset password mereka agar otomatis ter-upgrade.',
+                            style: TextStyle(
+                                fontSize: 12,
+                                color: Colors.orange.shade800),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+
                 const Divider(height: 1),
 
                 Expanded(
@@ -306,6 +356,7 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
                       final user = _users[i];
                       final isSelf = user.id == currentUserId;
                       final isAdmin = user.role == 'admin';
+                      final needsSaltUpgrade = user.salt == null;
 
                       return ListTile(
                         leading: CircleAvatar(
@@ -349,6 +400,26 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
                                         color: Colors.blue)),
                               ),
                             ],
+                            // Badge akun lama yang belum diupgrade keamanannya
+                            if (needsSaltUpgrade) ...[
+                              const SizedBox(width: 6),
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 6, vertical: 1),
+                                decoration: BoxDecoration(
+                                  color: Colors.orange.shade100,
+                                  borderRadius: BorderRadius.circular(6),
+                                  border: Border.all(
+                                      color: Colors.orange.shade300),
+                                ),
+                                child: const Text(
+                                  'Perlu Reset',
+                                  style: TextStyle(
+                                      fontSize: 10,
+                                      color: Colors.orange),
+                                ),
+                              ),
+                            ],
                           ],
                         ),
                         subtitle: Text(
@@ -361,7 +432,24 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
                           ),
                         ),
                         trailing: isSelf
-                            ? null // Tidak bisa hapus diri sendiri
+                            ? PopupMenuButton<String>(
+                                onSelected: (val) {
+                                  if (val == 'reset') {
+                                    _showResetPasswordDialog(user);
+                                  }
+                                },
+                                itemBuilder: (_) => [
+                                  const PopupMenuItem(
+                                    value: 'reset',
+                                    child: Row(children: [
+                                      Icon(Icons.lock_reset,
+                                          size: 18, color: Colors.orange),
+                                      SizedBox(width: 8),
+                                      Text('Ganti Password Saya'),
+                                    ]),
+                                  ),
+                                ],
+                              )
                             : PopupMenuButton<String>(
                                 onSelected: (val) {
                                   if (val == 'reset') {
