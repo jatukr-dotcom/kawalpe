@@ -757,7 +757,7 @@ class _AddPointScreenState extends State<AddPointScreen> {
                     value: _selectedSpesies,
                     isExpanded: true,
                     decoration: const InputDecoration(
-                      hintText: 'Pilih spesies mangrove',
+                      hintText: 'Pilih spesies tanaman',
                       prefixIcon: Icon(Icons.park),
                     ),
                     items: _daftarSpesies.map((spesies) {
@@ -844,7 +844,7 @@ class _AddPointScreenState extends State<AddPointScreen> {
             TextFormField(
               controller: _catatanController,
               decoration: const InputDecoration(
-                hintText: 'Keterangan tambahan (kondisi area, hambatan, dll.)',
+                hintText: 'Keterangan tambahan (tinggi pohon, hambatan, dll.)',
                 prefixIcon: Icon(Icons.notes),
                 alignLabelWithHint: true,
               ),

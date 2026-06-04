@@ -255,11 +255,21 @@ class DatabaseHelper {
   /// Simpan titik tanam baru
   Future<void> insertPoint(PlantingPoint point) async {
     final db = await database;
-    await db.insert(
-      'planting_points',
-      point.toMap(),
-      conflictAlgorithm: ConflictAlgorithm.replace,
-    );
+    try {
+      final rowsAffected = await db.insert(
+        'planting_points',
+        point.toMap(),
+        conflictAlgorithm: ConflictAlgorithm.replace,
+      );
+      debugPrint(
+          'DB insertPoint: id=${point.id.substring(0, 8)}, rows=$rowsAffected, project=${point.projectId.substring(0, 8)}');
+      if (rowsAffected == 0) {
+        throw Exception('insertPoint: 0 baris terpengaruh — data tidak tersimpan!');
+      }
+    } catch (e) {
+      debugPrint('DB insertPoint ERROR: $e\nData: ${point.toMap()}');
+      rethrow; // lempar kembali agar UI bisa tampilkan pesan
+    }
   }
 
   /// Ambil semua titik dalam proyek (max 100 terbaru)
