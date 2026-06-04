@@ -442,6 +442,17 @@ class DatabaseHelper {
     );
   }
 
+  /// Insert atau update user (untuk sync dari Supabase).
+  /// Jika username sudah ada → update nama, role, password_hash.
+  Future<void> upsertUser(AppUser user) async {
+    final db = await database;
+    await db.insert(
+      'app_users',
+      user.toMap(),
+      conflictAlgorithm: ConflictAlgorithm.replace,
+    );
+  }
+
   /// Ambil user berdasarkan ID
   Future<AppUser?> getUserById(String id) async {
     final db = await database;

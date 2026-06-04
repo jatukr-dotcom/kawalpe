@@ -10,6 +10,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
 
 import '../database/database_helper.dart';
+import '../models/app_user.dart';
 import '../models/project.dart';
 import '../models/planting_point.dart';
 
@@ -398,6 +399,86 @@ class SyncService {
       debugPrint('SyncService: Gagal pull spesies: $e');
       return 0;
     }
+  }
+
+  // =========================================================
+  // SINKRONISASI AKUN PENGGUNA
+  // =========================================================
+
+  /// Download semua akun pengguna dari Supabase ke SQLite lokal.
+  /// Dijalankan: pertama kali install, atau manual via Settings.
+  /// Kembalikan jumlah akun yang berhasil diunduh.
+  Future<int> pullUsers() async {
+    final client = _getSupabaseClient();
+    if (client == null) {
+      debugPrint('SyncService pullUsers: Supabase belum dikonfigurasi');
+      return 0;
+    }
+
+    try {
+      final response = await client
+          .from('app_users')
+          .select('id, nama, username, password_hash, role, created_at')
+          .order('created_at');
+
+      int count = 0;
+      for (final row in response as List<dynamic>) {
+        final map = row as Map<String, dynamic>;
+        // Skip jika password_hash kosong (akun belum lengkap di Supabase)
+        if ((map['password_hash'] as String? ?? '').isEmpty) continue;
+
+        final user = AppUser(
+          id: map['id'] as String,
+          nama: map['nama'] as String,
+          username: (map['username'] as String).toLowerCase(),
+          passwordHash: map['password_hash'] as String,
+          role: map['role'] as String? ?? 'user',
+          createdAt: map['created_at'] as String,
+        );
+        await _db.upsertUser(user);
+        count++;
+      }
+      debugPrint('SyncService pullUsers: $count akun diunduh dari Supabase');
+      return count;
+    } catch (e) {
+      debugPrint('SyncService pullUsers ERROR: $e');
+      return 0;
+    }
+  }
+
+  /// Upload akun yang ditambahkan admin di app ke Supabase.
+  /// Hanya upload akun yang belum ada di Supabase (cek by username).
+  Future<int> pushUsers() async {
+    final client = _getSupabaseClient();
+    if (client == null) return 0;
+
+    try {
+      final localUsers = await _db.getAllUsers();
+      int count = 0;
+      for (final user in localUsers) {
+        await client.from('app_users').upsert({
+          'id': user.id,
+          'nama': user.nama,
+          'username': user.username,
+          'password_hash': user.passwordHash,
+          'role': user.role,
+          'created_at': user.createdAt,
+        }, onConflict: 'username');
+        count++;
+      }
+      debugPrint('SyncService pushUsers: $count akun dikirim ke Supabase');
+      return count;
+    } catch (e) {
+      debugPrint('SyncService pushUsers ERROR: $e');
+      return 0;
+    }
+  }
+
+  /// Sync akun dua arah: push lokal → server, lalu pull server → lokal
+  Future<int> syncUsers() async {
+    if (!await isOnline()) return 0;
+    await pushUsers();
+    return await pullUsers();
   }
 
   /// Sync spesies dua arah: push lokal → server, lalu pull server → lokal
