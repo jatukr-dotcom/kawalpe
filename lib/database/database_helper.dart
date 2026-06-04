@@ -28,7 +28,7 @@ class DatabaseHelper {
 
     return await openDatabase(
       path,
-      version: 7,
+      version: 8,
       onCreate: _onCreate,
       onUpgrade: _onUpgrade,
       onConfigure: (db) async {
@@ -78,6 +78,12 @@ class DatabaseHelper {
       // Nomor urut global dari Supabase (diisi setelah sync berhasil)
       await db.execute(
         'ALTER TABLE planting_points ADD COLUMN nomor_titik INTEGER',
+      );
+    }
+    if (oldVersion < 8) {
+      // Salt unik per-user untuk keamanan hashing password
+      await db.execute(
+        'ALTER TABLE app_users ADD COLUMN salt TEXT',
       );
     }
   }
@@ -132,7 +138,8 @@ class DatabaseHelper {
         username      TEXT UNIQUE NOT NULL,
         password_hash TEXT NOT NULL,
         role          TEXT NOT NULL DEFAULT 'user',
-        created_at    TEXT NOT NULL
+        created_at    TEXT NOT NULL,
+        salt          TEXT
       )
     ''');
 
@@ -314,9 +321,10 @@ class DatabaseHelper {
   }
 
   /// Ambil titik yang belum tersync (untuk upload)
+  /// Titik yang sudah gagal sync ≥5 kali dilewati (perlu reset manual)
   Future<List<PlantingPoint>> getUnsyncedPoints({String? projectId}) async {
     final db = await database;
-    String where = 'synced = 0';
+    String where = 'synced = 0 AND sync_attempt < 5';
     List<dynamic> whereArgs = [];
 
     if (projectId != null) {
@@ -333,10 +341,56 @@ class DatabaseHelper {
     return result.map((map) => PlantingPoint.fromMap(map)).toList();
   }
 
-  /// Tandai titik sudah tersync, update URL foto cloud
+  /// Ambil titik yang gagal sync melebihi batas percobaan (untuk ditampilkan ke admin)
+  Future<List<PlantingPoint>> getFailedSyncPoints({String? projectId}) async {
+    final db = await database;
+    String where = 'synced = 0 AND sync_attempt >= 5';
+    List<dynamic> whereArgs = [];
+
+    if (projectId != null) {
+      where += ' AND project_id = ?';
+      whereArgs.add(projectId);
+    }
+
+    final result = await db.query(
+      'planting_points',
+      where: where,
+      whereArgs: whereArgs.isEmpty ? null : whereArgs,
+      orderBy: 'timestamp ASC',
+    );
+    return result.map((map) => PlantingPoint.fromMap(map)).toList();
+  }
+
+  /// Reset hitungan percobaan sync agar bisa dicoba lagi
+  Future<void> resetSyncAttempt(String pointId) async {
+    final db = await database;
+    await db.update(
+      'planting_points',
+      {'sync_attempt': 0},
+      where: 'id = ?',
+      whereArgs: [pointId],
+    );
+  }
+
+  /// Simpan foto_cloud_url ke SQLite secara terpisah (idempoten, aman saat crash)
+  /// Dipanggil SEBELUM menghapus foto lokal agar URL tidak hilang jika app crash
+  Future<void> saveFotoCloudUrl(String pointId, String fotoCloudUrl) async {
+    final db = await database;
+    await db.update(
+      'planting_points',
+      {'foto_cloud_url': fotoCloudUrl},
+      where: 'id = ?',
+      whereArgs: [pointId],
+    );
+  }
+
+  /// Tandai titik sudah tersync, update URL foto cloud, bersihkan path lokal
   Future<void> markPointSynced(String pointId, {String? fotoCloudUrl}) async {
     final db = await database;
-    final updateMap = <String, dynamic>{'synced': 1};
+    final updateMap = <String, dynamic>{
+      'synced': 1,
+      'foto_local_path': null, // hapus path lokal setelah foto berhasil diupload
+    };
     if (fotoCloudUrl != null) {
       updateMap['foto_cloud_url'] = fotoCloudUrl;
     }

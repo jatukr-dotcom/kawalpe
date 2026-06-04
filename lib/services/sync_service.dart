@@ -139,13 +139,18 @@ class SyncService {
         }
 
         // 2. Upload foto ke Cloudinary
-        String? fotoCloudUrl;
-        if (point.fotoLocalPath != null && point.fotoLocalPath!.isNotEmpty) {
-          fotoCloudUrl = await _uploadToCloudinary(
-            imagePath: point.fotoLocalPath!,
-            projectId: point.projectId,
-            config: config,
-          );
+        // Jika foto_cloud_url sudah ada (crash sebelumnya), skip upload
+        String? fotoCloudUrl = point.fotoCloudUrl;
+        if (fotoCloudUrl == null || fotoCloudUrl.isEmpty) {
+          if (point.fotoLocalPath != null && point.fotoLocalPath!.isNotEmpty) {
+            fotoCloudUrl = await _uploadToCloudinary(
+              imagePath: point.fotoLocalPath!,
+              projectId: point.projectId,
+              config: config,
+            );
+          }
+        } else {
+          debugPrint('SyncService: Foto sudah di-upload sebelumnya, skip upload → $fotoCloudUrl');
         }
 
         // 3. Upsert titik ke Supabase (handle duplikat)
@@ -174,19 +179,25 @@ class SyncService {
           // Gagal baca nomor_titik tidak fatal — sync tetap berhasil
         }
 
-        // 5. Update status lokal (foto_cloud_url disimpan dulu sebelum dihapus)
+        // 5. Simpan foto_cloud_url ke SQLite SEBELUM hapus foto lokal
+        // (idempoten: jika crash setelah ini, URL sudah aman di lokal)
+        if (fotoCloudUrl != null) {
+          await _db.saveFotoCloudUrl(point.id, fotoCloudUrl);
+        }
+
+        // 6. Update status lokal (foto_cloud_url disimpan, foto_local_path dibersihkan)
         await _db.markPointSynced(point.id, fotoCloudUrl: fotoCloudUrl);
 
-        // 6. Hapus foto lokal setelah berhasil di-upload ke cloud
-        if (fotoCloudUrl != null && point.fotoLocalPath != null) {
+        // 7. Hapus foto lokal setelah URL cloud sudah aman tersimpan di SQLite
+        if (point.fotoLocalPath != null) {
           await _deleteLocalPhoto(point.fotoLocalPath!);
         }
 
-        // 7. Hapus record SQLite lokal — data sudah aman di Supabase
-        await _db.deletePointAfterSync(point.id);
+        // Record SQLite TIDAK dihapus — metadata titik dipertahankan untuk
+        // ditampilkan di ProjectScreen. Hanya foto fisik yang dihapus dari storage.
 
         successCount++;
-        debugPrint('SyncService: Titik ${point.id} berhasil di-sync & dihapus lokal');
+        debugPrint('SyncService: Titik ${point.id} berhasil di-sync (foto lokal dihapus, metadata dipertahankan)');
       } catch (e) {
         // Titik gagal → increment attempt, lanjut ke titik berikutnya
         await _db.incrementSyncAttempt(point.id);
@@ -418,7 +429,7 @@ class SyncService {
     try {
       final response = await client
           .from('app_users')
-          .select('id, nama, username, password_hash, role, created_at')
+          .select('id, nama, username, password_hash, role, created_at, salt')
           .order('created_at');
 
       int count = 0;
@@ -434,6 +445,7 @@ class SyncService {
           passwordHash: map['password_hash'] as String,
           role: map['role'] as String? ?? 'user',
           createdAt: map['created_at'] as String,
+          salt: map['salt'] as String?,
         );
         await _db.upsertUser(user);
         count++;
@@ -463,6 +475,7 @@ class SyncService {
           'password_hash': user.passwordHash,
           'role': user.role,
           'created_at': user.createdAt,
+          'salt': user.salt,
         }, onConflict: 'username');
         count++;
       }

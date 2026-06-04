@@ -140,7 +140,15 @@ class _AddPointScreenState extends State<AddPointScreen> {
 
     // Listen ke stream posisi
     _gpsService.positionStream.listen((position) {
-      if (!mounted || position == null) return;
+      if (!mounted) return;
+
+      // position == null berarti GPS error / sinyal hilang
+      if (position == null) {
+        if (_gpsLocked) {
+          setState(() => _gpsSignalLost = true);
+        }
+        return;
+      }
 
       // Hitung moving average akurasi (3 sample)
       _accuracyBuffer.add(position.accuracy);
@@ -153,9 +161,9 @@ class _AddPointScreenState extends State<AddPointScreen> {
         _currentPosition = position;
         _currentAccuracy = avgAccuracy;
 
-        // Deteksi sinyal GPS hilang setelah kunci (edge case 4)
-        if (_gpsLocked) {
-          _gpsSignalLost = false; // Sinyal kembali
+        // Sinyal kembali — sembunyikan banner peringatan
+        if (_gpsLocked && _gpsSignalLost) {
+          _gpsSignalLost = false;
         }
       });
     });

@@ -9,6 +9,7 @@ class AppUser {
   final String passwordHash;
   final String role; // 'admin' | 'user'
   final String createdAt;
+  final String? salt; // Salt unik per-user untuk hashing password
 
   AppUser({
     required this.id,
@@ -17,6 +18,7 @@ class AppUser {
     required this.passwordHash,
     required this.role,
     required this.createdAt,
+    this.salt,
   });
 
   bool get isAdmin => role == 'admin';
@@ -29,6 +31,7 @@ class AppUser {
       passwordHash: map['password_hash'] as String,
       role: map['role'] as String,
       createdAt: map['created_at'] as String,
+      salt: map['salt'] as String?,
     );
   }
 
@@ -40,6 +43,7 @@ class AppUser {
       'password_hash': passwordHash,
       'role': role,
       'created_at': createdAt,
+      'salt': salt,
     };
   }
 }

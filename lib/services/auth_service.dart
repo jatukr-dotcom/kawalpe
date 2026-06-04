@@ -2,6 +2,7 @@
 // services/auth_service.dart - Autentikasi offline berbasis SQLite
 // =========================================================
 import 'dart:convert';
+import 'dart:math';
 import 'package:crypto/crypto.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -32,9 +33,19 @@ class AuthService {
   // HASHING
   // =========================================================
 
-  /// Hash password dengan username sebagai salt
-  static String hashPassword(String username, String password) {
-    final input = '$username:$password:kawal_pe_2024';
+  /// Generate salt acak 32 karakter hex untuk user baru
+  static String generateSalt() {
+    final random = Random.secure();
+    final bytes = List<int>.generate(16, (_) => random.nextInt(256));
+    return bytes.map((b) => b.toRadixString(16).padLeft(2, '0')).join();
+  }
+
+  /// Hash password menggunakan salt per-user
+  /// [salt]: salt unik milik user (tersimpan di DB dan Supabase)
+  /// Fallback ke salt lama jika salt null (kompatibilitas akun lama)
+  static String hashPassword(String username, String password, {String? salt}) {
+    final String effectiveSalt = salt ?? 'kawal_pe_2024';
+    final input = '$username:$password:$effectiveSalt';
     final bytes = utf8.encode(input);
     return sha256.convert(bytes).toString();
   }
@@ -60,8 +71,18 @@ class AuthService {
   /// Login dengan username dan password
   /// Mengembalikan AppUser jika berhasil, null jika gagal
   Future<AppUser?> login(String username, String password) async {
-    final hash = hashPassword(username.trim().toLowerCase(), password);
     final db = DatabaseHelper();
+    // Ambil user dulu untuk mendapatkan salt-nya
+    final userRecord = await db.getUserByUsername(username.trim().toLowerCase());
+    if (userRecord == null) return null;
+
+    // Hash menggunakan salt milik user (atau fallback ke salt lama)
+    final hash = hashPassword(
+      username.trim().toLowerCase(),
+      password,
+      salt: userRecord.salt,
+    );
+
     final user = await db.getUserByCredentials(
       username.trim().toLowerCase(),
       hash,
@@ -88,8 +109,16 @@ class AuthService {
     required String usernameTarget,
     required String passwordBaru,
   }) async {
-    final hash = hashPassword(usernameTarget.toLowerCase(), passwordBaru);
     final db = DatabaseHelper();
+    // Ambil user untuk mendapatkan salt-nya
+    final user = await db.getUserByUsername(usernameTarget.toLowerCase());
+    if (user == null) return false;
+
+    final hash = hashPassword(
+      usernameTarget.toLowerCase(),
+      passwordBaru,
+      salt: user.salt,
+    );
     return await db.updateUserPassword(usernameTarget.toLowerCase(), hash);
   }
 
@@ -117,13 +146,18 @@ class AuthService {
     final existing = await db.getUserByUsername(username.trim().toLowerCase());
     if (existing != null) return null; // username sudah dipakai
 
+    // Generate salt unik untuk user baru
+    final salt = generateSalt();
+    final normalizedUsername = username.trim().toLowerCase();
+
     final user = AppUser(
       id: 'u_${DateTime.now().millisecondsSinceEpoch}',
       nama: nama.trim(),
-      username: username.trim().toLowerCase(),
-      passwordHash: hashPassword(username.trim().toLowerCase(), password),
+      username: normalizedUsername,
+      passwordHash: hashPassword(normalizedUsername, password, salt: salt),
       role: role,
       createdAt: DateTime.now().toIso8601String(),
+      salt: salt,
     );
 
     await db.insertUser(user);
