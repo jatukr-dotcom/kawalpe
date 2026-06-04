@@ -8,6 +8,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:intl/date_symbol_data_local.dart';
 
+import 'config/app_config.dart';
 import 'screens/home_screen.dart';
 import 'screens/login_screen.dart';
 import 'services/auth_service.dart';
@@ -39,19 +40,24 @@ void main() async {
   runApp(const KawalPEApp());
 }
 
-/// Inisialisasi Supabase menggunakan konfigurasi yang tersimpan di SharedPreferences
+/// Inisialisasi Supabase dari AppConfig (hardcoded)
 Future<void> _initSupabase() async {
-  final prefs = await SharedPreferences.getInstance();
-  final url = prefs.getString('supabase_url') ?? '';
-  final anonKey = prefs.getString('supabase_anon_key') ?? '';
+  try {
+    await Supabase.initialize(
+      url: AppConfig.supabaseUrl,
+      anonKey: AppConfig.supabaseAnonKey,
+    );
 
-  if (url.isNotEmpty && anonKey.isNotEmpty) {
-    try {
-      await Supabase.initialize(url: url, anonKey: anonKey);
-    } catch (e) {
-      // Supabase belum dikonfigurasi, akan dikonfigurasi nanti di Settings
-      debugPrint('Supabase belum dikonfigurasi: $e');
-    }
+    // Simpan ke SharedPreferences agar SyncService bisa baca
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('supabase_url', AppConfig.supabaseUrl);
+    await prefs.setString('supabase_anon_key', AppConfig.supabaseAnonKey);
+    await prefs.setString('cloudinary_cloud_name', AppConfig.cloudinaryCloudName);
+    await prefs.setString('cloudinary_upload_preset', AppConfig.cloudinaryUploadPreset);
+
+    debugPrint('Supabase berhasil diinisialisasi: ${AppConfig.supabaseUrl}');
+  } catch (e) {
+    debugPrint('Supabase init error: $e');
   }
 }
 
