@@ -5,6 +5,7 @@ import 'package:connectivity_plus/connectivity_plus.dart';
 import '../database/database_helper.dart';
 import '../models/project.dart';
 import '../models/planting_point.dart';
+import '../services/auth_service.dart';
 import '../services/sync_service.dart';
 import '../widgets/connectivity_badge.dart';
 import 'add_point_screen.dart';
@@ -56,7 +57,15 @@ class _ProjectScreenState extends State<ProjectScreen> {
   Future<void> _loadData() async {
     setState(() => _isLoading = true);
     try {
-      final points = await _db.getPointsByProject(widget.project.id);
+      final auth = AuthService();
+      final isAdmin = auth.isAdmin;
+      // Admin lihat semua titik, petugas hanya titik miliknya sendiri
+      final recordedBy = isAdmin ? null : auth.currentUser?.username;
+
+      final points = await _db.getPointsByProject(
+        widget.project.id,
+        recordedBy: recordedBy,
+      );
       final project = await _db.getProjectById(widget.project.id);
       if (mounted) {
         setState(() {

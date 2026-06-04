@@ -273,18 +273,44 @@ class DatabaseHelper {
     }
   }
 
-  /// Ambil semua titik dalam proyek (max 100 terbaru)
-  Future<List<PlantingPoint>> getPointsByProject(String projectId,
-      {int limit = 100}) async {
+  /// Ambil titik dalam proyek.
+  /// [recordedBy]: jika diisi, hanya ambil titik milik user tersebut.
+  ///               jika null (admin), ambil semua titik.
+  Future<List<PlantingPoint>> getPointsByProject(
+    String projectId, {
+    int limit = 200,
+    String? recordedBy,
+  }) async {
     final db = await database;
+
+    String where = 'project_id = ?';
+    final whereArgs = <dynamic>[projectId];
+
+    // Petugas hanya lihat titik milik mereka sendiri
+    if (recordedBy != null) {
+      where += ' AND recorded_by = ?';
+      whereArgs.add(recordedBy);
+    }
+
     final result = await db.query(
       'planting_points',
-      where: 'project_id = ?',
-      whereArgs: [projectId],
+      where: where,
+      whereArgs: whereArgs,
       orderBy: 'timestamp DESC',
       limit: limit,
     );
     return result.map((map) => PlantingPoint.fromMap(map)).toList();
+  }
+
+  /// Hapus record titik dari SQLite setelah berhasil di-sync ke Supabase.
+  Future<void> deletePointAfterSync(String pointId) async {
+    final db = await database;
+    await db.delete(
+      'planting_points',
+      where: 'id = ?',
+      whereArgs: [pointId],
+    );
+    debugPrint('DB: Titik $pointId dihapus dari lokal (sudah sync ke Supabase)');
   }
 
   /// Ambil titik yang belum tersync (untuk upload)

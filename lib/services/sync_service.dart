@@ -173,17 +173,19 @@ class SyncService {
           // Gagal baca nomor_titik tidak fatal — sync tetap berhasil
         }
 
-        // 5. Update status lokal
+        // 5. Update status lokal (foto_cloud_url disimpan dulu sebelum dihapus)
         await _db.markPointSynced(point.id, fotoCloudUrl: fotoCloudUrl);
 
         // 6. Hapus foto lokal setelah berhasil di-upload ke cloud
-        //    Foto sudah aman di Cloudinary — hemat storage HP
         if (fotoCloudUrl != null && point.fotoLocalPath != null) {
           await _deleteLocalPhoto(point.fotoLocalPath!);
         }
 
+        // 7. Hapus record SQLite lokal — data sudah aman di Supabase
+        await _db.deletePointAfterSync(point.id);
+
         successCount++;
-        debugPrint('SyncService: Titik ${point.id} berhasil di-sync');
+        debugPrint('SyncService: Titik ${point.id} berhasil di-sync & dihapus lokal');
       } catch (e) {
         // Titik gagal → increment attempt, lanjut ke titik berikutnya
         await _db.incrementSyncAttempt(point.id);
