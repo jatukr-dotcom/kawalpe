@@ -486,6 +486,8 @@ class DatabaseHelper {
         'spesies': point.spesies,
         'kondisi': point.kondisi,
         'catatan': point.catatan,
+        'tinggi': point.tinggi,
+        'diameter': point.diameter,
         'synced': 0, // perlu sync ulang setelah edit
       },
       where: 'id = ?',
