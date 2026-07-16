@@ -31,7 +31,7 @@ class _AddProjectScreenState extends State<AddProjectScreen> {
 
   DateTime _tanggalMulai = DateTime.now();
   DateTime? _tanggalSelesai;
-  String? _jenisLahan; // 'Tambak', 'Pesisir', 'Terestrial'
+  String? _jenisLahan; // Single select jenis lahan
   bool _isSaving = false;
   bool _localeReady = false;
 
@@ -269,42 +269,28 @@ class _AddProjectScreenState extends State<AddProjectScreen> {
               ),
               const SizedBox(height: 8),
 
-              // Jenis Lahan Penanaman (opsional)
+              // Jenis Lahan Penanaman (opsional) — dropdown single-select
               const Text(
                 'Jenis Lahan Penanaman (opsional)',
                 style: TextStyle(fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 8),
               DropdownButtonFormField<String>(
-                value: _jenisLahan,
                 decoration: const InputDecoration(
-                  prefixIcon: Icon(Icons.landscape),
                   hintText: 'Pilih jenis lahan',
+                  prefixIcon: Icon(Icons.landscape),
                 ),
                 items: const [
-                  DropdownMenuItem(
-                    value: 'Tambak',
-                    child: Row(children: [
-                      Text('🐟  '),
-                      Text('Tambak'),
-                    ]),
-                  ),
-                  DropdownMenuItem(
-                    value: 'Pesisir',
-                    child: Row(children: [
-                      Text('🌊  '),
-                      Text('Pesisir'),
-                    ]),
-                  ),
-                  DropdownMenuItem(
-                    value: 'Terestrial',
-                    child: Row(children: [
-                      Text('🌳  '),
-                      Text('Terestrial (Daratan)'),
-                    ]),
-                  ),
+                  DropdownMenuItem(value: 'Tambak', child: Text('Tambak')),
+                  DropdownMenuItem(value: 'Pesisir', child: Text('Pesisir')),
+                  DropdownMenuItem(value: 'Bantaran Sungai', child: Text('Bantaran Sungai')),
+                  DropdownMenuItem(value: 'Terestrial (Daratan)', child: Text('Terestrial (Daratan)')),
                 ],
-                onChanged: (val) => setState(() => _jenisLahan = val),
+                onChanged: (value) {
+                  setState(() {
+                    _jenisLahan = value;
+                  });
+                },
               ),
               const SizedBox(height: 16),
 

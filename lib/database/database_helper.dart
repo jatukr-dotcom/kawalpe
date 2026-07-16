@@ -28,7 +28,7 @@ class DatabaseHelper {
 
     return await openDatabase(
       path,
-      version: 9,
+      version: 10,
       onCreate: _onCreate,
       onUpgrade: _onUpgrade,
       onConfigure: (db) async {
@@ -95,6 +95,12 @@ class DatabaseHelper {
         'ALTER TABLE planting_points ADD COLUMN diameter REAL',
       );
     }
+    if (oldVersion < 10) {
+      // Jenis lahan spesifik per titik (berbeda dari jenis_lahan proyek)
+      await db.execute(
+        'ALTER TABLE planting_points ADD COLUMN jenis_lahan TEXT',
+      );
+    }
   }
 
   /// Buat tabel saat pertama kali membuka database
@@ -126,6 +132,7 @@ class DatabaseHelper {
         accuracy        REAL,
         spesies         TEXT NOT NULL,
         kondisi         TEXT NOT NULL,
+        jenis_lahan     TEXT,
         catatan         TEXT,
         tinggi          REAL,
         diameter        REAL,
@@ -509,7 +516,7 @@ class DatabaseHelper {
         'catatan': point.catatan,
         'tinggi': point.tinggi,
         'diameter': point.diameter,
-        'synced': 0, // perlu sync ulang setelah edit
+        'synced': 0,
       },
       where: 'id = ?',
       whereArgs: [point.id],

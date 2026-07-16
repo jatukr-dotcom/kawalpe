@@ -40,7 +40,7 @@ void main() async {
 
   // Pull user terbaru dari Supabase di background saat app dibuka
   // Tidak menunggu hasilnya agar startup tidak lambat
-  SyncService().syncUsers().catchError((_) {});
+  SyncService().syncUsers().catchError((_) => 0);
 
   runApp(const KawalPEApp());
 }
