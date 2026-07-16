@@ -528,6 +528,124 @@ class SyncService {
       return false;
     }
   }
+
+  // =========================================================
+  // HAPUS PROYEK & TITIK DARI SUPABASE
+  // =========================================================
+
+  /// Hapus proyek dan semua titiknya dari Supabase (cascade delete).
+  /// PENTING: Ini menghapus data permanen dari server!
+  /// 
+  /// Returns: true jika berhasil, false jika gagal
+  Future<bool> deleteProjectFromServer(String projectId) async {
+    final client = _getSupabaseClient();
+    if (client == null) {
+      debugPrint('SyncService deleteProjectFromServer: Supabase belum dikonfigurasi');
+      return false;
+    }
+
+    try {
+      // 1. Ambil semua titik tanam untuk mendapatkan foto URLs
+      final pointsResponse = await client
+          .from('planting_points')
+          .select('id, foto_url')
+          .eq('project_id', projectId);
+
+      final pointIds = <String>[];
+      final fotoUrls = <String>[];
+      
+      for (final row in pointsResponse as List<dynamic>) {
+        final map = row as Map<String, dynamic>;
+        pointIds.add(map['id'] as String);
+        final fotoUrl = map['foto_url'] as String?;
+        if (fotoUrl != null && fotoUrl.isNotEmpty) {
+          fotoUrls.add(fotoUrl);
+        }
+      }
+
+      debugPrint('SyncService: Akan menghapus ${pointIds.length} titik dan ${fotoUrls.length} foto');
+
+      // 2. Hapus foto dari Cloudinary (optional - foto akan tetap ada jika gagal)
+      // Note: Cloudinary tidak punya public API untuk hapus foto tanpa API key & secret
+      // Foto di Cloudinary bisa dihapus manual dari dashboard atau pakai backend server
+      for (final url in fotoUrls) {
+        debugPrint('SyncService: Foto di Cloudinary tidak dihapus otomatis: $url');
+        // TODO: Implement foto deletion via backend server if needed
+      }
+
+      // 3. Hapus titik tanam dari Supabase
+      if (pointIds.isNotEmpty) {
+        await client
+            .from('planting_points')
+            .delete()
+            .eq('project_id', projectId);
+        debugPrint('SyncService: ${pointIds.length} titik dihapus dari Supabase');
+      }
+
+      // 4. Hapus proyek dari Supabase
+      await client
+          .from('projects')
+          .delete()
+          .eq('id', projectId);
+      
+      debugPrint('SyncService: Proyek $projectId berhasil dihapus dari Supabase');
+      return true;
+    } catch (e) {
+      debugPrint('SyncService deleteProjectFromServer ERROR: $e');
+      return false;
+    }
+  }
+
+  /// Ambil semua proyek dari Supabase dengan statistik titik
+  /// (untuk menu Kelola Proyek Server)
+  Future<List<ProjectWithStats>> fetchProjectsWithStats() async {
+    final client = _getSupabaseClient();
+    if (client == null) return [];
+
+    try {
+      // Ambil semua proyek
+      final projectsResponse = await client
+          .from('projects')
+          .select()
+          .order('created_at', ascending: false);
+
+      final projects = <ProjectWithStats>[];
+      
+      for (final row in projectsResponse as List<dynamic>) {
+        final projectMap = row as Map<String, dynamic>;
+        final projectId = projectMap['id'] as String;
+        
+        // Hitung jumlah titik per proyek (ambil semua lalu hitung)
+        final pointsResponse = await client
+            .from('planting_points')
+            .select('id')
+            .eq('project_id', projectId);
+        
+        final count = (pointsResponse as List).length;
+        
+        projects.add(ProjectWithStats(
+          project: Project.fromSupabase(projectMap),
+          pointCount: count,
+        ));
+      }
+      
+      return projects;
+    } catch (e) {
+      debugPrint('SyncService fetchProjectsWithStats ERROR: $e');
+      return [];
+    }
+  }
+}
+
+/// Proyek dengan statistik titik (untuk UI Kelola Proyek Server)
+class ProjectWithStats {
+  final Project project;
+  final int pointCount;
+
+  const ProjectWithStats({
+    required this.project,
+    required this.pointCount,
+  });
 }
 
 /// Hasil sync spesies

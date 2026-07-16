@@ -8,6 +8,8 @@ import 'package:uuid/uuid.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 
 import '../services/sync_service.dart';
+import '../services/auth_service.dart';
+import 'manage_server_projects_screen.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -390,6 +392,31 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   ),
                 ),
               ),
+              
+              // Tombol Kelola Proyek Server - hanya untuk admin
+              if (AuthService().isAdmin) ...[
+                const SizedBox(height: 12),
+                SizedBox(
+                  width: double.infinity,
+                  height: 56,
+                  child: OutlinedButton.icon(
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const ManageServerProjectsScreen(),
+                        ),
+                      );
+                    },
+                    icon: const Icon(Icons.cloud_off),
+                    label: const Text('Kelola Proyek Server'),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: Colors.red,
+                      side: const BorderSide(color: Colors.red),
+                    ),
+                  ),
+                ),
+              ],
             ],
           ),
         ),

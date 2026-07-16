@@ -353,15 +353,44 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  /// Konfirmasi dan hapus proyek (edge case 11)
+  /// Konfirmasi dan hapus proyek dari perangkat lokal
   Future<void> _confirmDeleteProject(Project project) async {
     final confirm = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Hapus Proyek?'),
-        content: Text(
-          'Proyek "${project.namaProyek}" memiliki ${project.jumlahTitik} titik. '
-          'Semua data titik akan ikut terhapus dari HP ini. Yakin?',
+        title: const Text('Hapus Proyek dari Perangkat?'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Proyek: ${project.namaProyek}',
+              style: const TextStyle(fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 8),
+            Text('Total titik: ${project.jumlahTitik} titik'),
+            const SizedBox(height: 16),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.blue.shade50,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.blue.shade200),
+              ),
+              child: const Row(
+                children: [
+                  Icon(Icons.info_outline, color: Colors.blue, size: 20),
+                  SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Data akan dihapus dari perangkat ini saja. Data di server tetap aman.',
+                      style: TextStyle(fontSize: 13, color: Colors.blue),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
         ),
         actions: [
           TextButton(
@@ -371,7 +400,7 @@ class _HomeScreenState extends State<HomeScreen> {
           ElevatedButton(
             style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
             onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Hapus'),
+            child: const Text('Hapus dari Perangkat'),
           ),
         ],
       ),
@@ -381,7 +410,7 @@ class _HomeScreenState extends State<HomeScreen> {
       await _db.deleteProject(project.id);
       await _loadData();
       if (mounted) {
-        _showSnackBar('Proyek berhasil dihapus.');
+        _showSnackBar('Proyek berhasil dihapus dari perangkat.');
       }
     }
   }
@@ -544,10 +573,8 @@ class _HomeScreenState extends State<HomeScreen> {
                               );
                               _loadData();
                             },
-                            // Hapus proyek hanya boleh admin
-                            onDelete: AuthService().isAdmin
-                                ? () => _confirmDeleteProject(project)
-                                : null,
+                            // Hapus proyek lokal - semua user bisa hapus
+                            onDelete: () => _confirmDeleteProject(project),
                           );
                         },
                         childCount: _projects.length,

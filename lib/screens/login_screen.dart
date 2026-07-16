@@ -229,7 +229,7 @@ class _LoginScreenState extends State<LoginScreen> {
             ),
             const SizedBox(height: 24),
             const Text(
-              'BKSDA — Sistem Tanam Pemulihan Ekosistem',
+              'BKSDA Kalimantan Timur',
               style: TextStyle(fontSize: 11, color: Colors.white54),
               textAlign: TextAlign.center,
             ),
@@ -260,7 +260,7 @@ class _LoginScreenState extends State<LoginScreen> {
             const Text('Kawal PE',
                 style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold,
                     color: Colors.white, letterSpacing: 1.5)),
-            const Text('Monitor Pemulihan Ekosistem',
+            const Text('Monitoring Pemulihan Ekosistem',
                 style: TextStyle(fontSize: 13, color: Colors.white70,
                     letterSpacing: 0.5)),
             const SizedBox(height: 40),
@@ -289,7 +289,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     TextFormField(
                       controller: _usernameCtrl,
                       decoration: _inputDecoration('Username',
-                          Icons.badge_outlined, hint: 'Contoh: budi.santoso'),
+                          Icons.badge_outlined, hint: 'Contoh: admin'),
                       keyboardType: TextInputType.emailAddress,
                       autocorrect: false,
                       validator: (v) {
@@ -353,7 +353,7 @@ class _LoginScreenState extends State<LoginScreen> {
             ),
             const SizedBox(height: 24),
             const Text(
-              'BKSDA — Sistem Tanam Pemulihan Ekosistem',
+              'BKSDA Kalimantan Timur',
               style: TextStyle(fontSize: 11, color: Colors.white54),
               textAlign: TextAlign.center,
             ),
