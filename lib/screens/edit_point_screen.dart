@@ -20,11 +20,14 @@ class EditPointScreen extends StatefulWidget {
 class _EditPointScreenState extends State<EditPointScreen> {
   final _formKey = GlobalKey<FormState>();
   final _catatanCtrl = TextEditingController();
+  final _tinggiCtrl = TextEditingController();
+  final _kelilingCtrl = TextEditingController();
   final _db = DatabaseHelper();
   final _speciesService = SpeciesService();
 
   late String _spesies;
   late String _kondisi;
+  double? _previewDiameter;
   List<String> _daftarSpesies = [];
   bool _isSaving = false;
   bool _isLoading = true;
@@ -35,12 +38,24 @@ class _EditPointScreenState extends State<EditPointScreen> {
     _spesies = widget.point.spesies;
     _kondisi = widget.point.kondisi;
     _catatanCtrl.text = widget.point.catatan ?? '';
+    // Pre-fill tinggi jika sudah ada
+    if (widget.point.tinggi != null) {
+      _tinggiCtrl.text = widget.point.tinggi!.toStringAsFixed(1);
+    }
+    // Pre-fill keliling dari diameter balik: keliling = diameter * π
+    if (widget.point.diameter != null) {
+      final keliling = widget.point.diameter! * 3.14159265358979;
+      _kelilingCtrl.text = keliling.toStringAsFixed(2);
+      _previewDiameter = widget.point.diameter;
+    }
     _loadSpesies();
   }
 
   @override
   void dispose() {
     _catatanCtrl.dispose();
+    _tinggiCtrl.dispose();
+    _kelilingCtrl.dispose();
     super.dispose();
   }
 
@@ -63,6 +78,19 @@ class _EditPointScreenState extends State<EditPointScreen> {
     setState(() => _isSaving = true);
 
     try {
+      // Parse tinggi (opsional)
+      final double? tinggi = _tinggiCtrl.text.trim().isEmpty
+          ? null
+          : double.tryParse(_tinggiCtrl.text.trim().replaceAll(',', '.'));
+
+      // Konversi keliling → diameter: d = keliling / π
+      final double? diameter = _kelilingCtrl.text.trim().isEmpty
+          ? null
+          : PlantingPoint.kelilingToDiameter(
+              double.tryParse(
+                      _kelilingCtrl.text.trim().replaceAll(',', '.')) ??
+                  0);
+
       final updated = PlantingPoint(
         id: widget.point.id,
         projectId: widget.point.projectId,
@@ -74,11 +102,13 @@ class _EditPointScreenState extends State<EditPointScreen> {
         catatan: _catatanCtrl.text.trim().isEmpty
             ? null
             : _catatanCtrl.text.trim(),
+        tinggi: tinggi,
+        diameter: diameter,
         fotoLocalPath: widget.point.fotoLocalPath,
         fotoCloudUrl: widget.point.fotoCloudUrl,
         deviceId: widget.point.deviceId,
         timestamp: widget.point.timestamp,
-        synced: false, // reset agar sync ulang
+        synced: false,
         syncAttempt: widget.point.syncAttempt,
       );
 
@@ -266,6 +296,110 @@ class _EditPointScreenState extends State<EditPointScreen> {
                           ),
                         );
                       }).toList(),
+                    ),
+                    const SizedBox(height: 20),
+
+                    // Tinggi & Diameter
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Input Tinggi
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text('Tinggi (cm)',
+                                  style:
+                                      TextStyle(fontWeight: FontWeight.bold)),
+                              const SizedBox(height: 8),
+                              TextFormField(
+                                controller: _tinggiCtrl,
+                                keyboardType:
+                                    const TextInputType.numberWithOptions(
+                                        decimal: true),
+                                decoration: InputDecoration(
+                                  hintText: 'Contoh: 150',
+                                  prefixIcon: const Icon(Icons.height),
+                                  suffixText: 'cm',
+                                  border: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                ),
+                                validator: (v) {
+                                  if (v != null && v.trim().isNotEmpty) {
+                                    final n = double.tryParse(
+                                        v.trim().replaceAll(',', '.'));
+                                    if (n == null || n <= 0) {
+                                      return 'Tidak valid';
+                                    }
+                                  }
+                                  return null;
+                                },
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        // Input Keliling → Diameter
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text('Keliling Batang (cm)',
+                                  style:
+                                      TextStyle(fontWeight: FontWeight.bold)),
+                              const SizedBox(height: 8),
+                              TextFormField(
+                                controller: _kelilingCtrl,
+                                keyboardType:
+                                    const TextInputType.numberWithOptions(
+                                        decimal: true),
+                                decoration: InputDecoration(
+                                  hintText: 'Contoh: 31.4',
+                                  prefixIcon: const Icon(
+                                      Icons.radio_button_unchecked),
+                                  suffixText: 'cm',
+                                  border: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  helperText: _previewDiameter != null
+                                      ? '⋅ ${_previewDiameter!.toStringAsFixed(2)} cm'
+                                      : 'Keliling → Diameter otomatis',
+                                  helperStyle: TextStyle(
+                                    color: _previewDiameter != null
+                                        ? const Color(0xFF2E7D32)
+                                        : Colors.grey,
+                                    fontWeight: _previewDiameter != null
+                                        ? FontWeight.bold
+                                        : FontWeight.normal,
+                                  ),
+                                ),
+                                onChanged: (v) {
+                                  final k = double.tryParse(
+                                      v.trim().replaceAll(',', '.'));
+                                  setState(() {
+                                    _previewDiameter =
+                                        (k != null && k > 0)
+                                            ? PlantingPoint
+                                                .kelilingToDiameter(k)
+                                            : null;
+                                  });
+                                },
+                                validator: (v) {
+                                  if (v != null && v.trim().isNotEmpty) {
+                                    final n = double.tryParse(
+                                        v.trim().replaceAll(',', '.'));
+                                    if (n == null || n <= 0) {
+                                      return 'Tidak valid';
+                                    }
+                                  }
+                                  return null;
+                                },
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
                     ),
                     const SizedBox(height: 20),
 

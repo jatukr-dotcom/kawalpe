@@ -215,6 +215,20 @@ class _DetailScreenState extends State<DetailScreen> {
                   _buildInfoCard([
                     _buildInfoRow(Icons.park, 'Spesies', _point.spesies),
                     _buildKondisiRow(_point.kondisi),
+                    _buildInfoRow(
+                      Icons.height,
+                      'Tinggi',
+                      _point.tinggi != null
+                          ? '${_point.tinggi!.toStringAsFixed(1)} cm'
+                          : '—',
+                    ),
+                    _buildInfoRow(
+                      Icons.radio_button_unchecked,
+                      'Diameter',
+                      _point.diameter != null
+                          ? '${_point.diameter!.toStringAsFixed(2)} cm'
+                          : '—',
+                    ),
                     if (_point.catatan != null && _point.catatan!.isNotEmpty)
                       _buildInfoRow(
                           Icons.notes, 'Catatan', _point.catatan!),
