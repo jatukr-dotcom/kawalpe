@@ -28,7 +28,7 @@ class DatabaseHelper {
 
     return await openDatabase(
       path,
-      version: 8,
+      version: 9,
       onCreate: _onCreate,
       onUpgrade: _onUpgrade,
       onConfigure: (db) async {
@@ -86,6 +86,15 @@ class DatabaseHelper {
         'ALTER TABLE app_users ADD COLUMN salt TEXT',
       );
     }
+    if (oldVersion < 9) {
+      // Tinggi pohon (cm) dan diameter batang (cm, dihitung dari keliling / π)
+      await db.execute(
+        'ALTER TABLE planting_points ADD COLUMN tinggi REAL',
+      );
+      await db.execute(
+        'ALTER TABLE planting_points ADD COLUMN diameter REAL',
+      );
+    }
   }
 
   /// Buat tabel saat pertama kali membuka database
@@ -118,6 +127,8 @@ class DatabaseHelper {
         spesies         TEXT NOT NULL,
         kondisi         TEXT NOT NULL,
         catatan         TEXT,
+        tinggi          REAL,
+        diameter        REAL,
         foto_local_path TEXT,
         foto_cloud_url  TEXT,
         device_id       TEXT NOT NULL,

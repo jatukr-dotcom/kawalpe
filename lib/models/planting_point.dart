@@ -1,6 +1,7 @@
 // =========================================================
 // models/planting_point.dart - Model data Titik Tanam
 // =========================================================
+import 'dart:math' as math;
 
 class PlantingPoint {
   final String id;             // UUID v4 - primary key
@@ -11,6 +12,8 @@ class PlantingPoint {
   final String spesies;
   final String kondisi;        // 'Sehat', 'Merana', 'Mati'
   final String? catatan;
+  final double? tinggi;        // Tinggi pohon dalam cm
+  final double? diameter;      // Diameter batang dalam cm (dihitung dari keliling / π)
   final String? fotoLocalPath;
   String? fotoCloudUrl;
   final String deviceId;
@@ -29,6 +32,8 @@ class PlantingPoint {
     required this.spesies,
     required this.kondisi,
     this.catatan,
+    this.tinggi,
+    this.diameter,
     this.fotoLocalPath,
     this.fotoCloudUrl,
     required this.deviceId,
@@ -38,6 +43,11 @@ class PlantingPoint {
     this.synced = false,
     this.syncAttempt = 0,
   });
+
+  /// Hitung diameter dari keliling menggunakan rumus: diameter = keliling / π
+  static double kelilingToDiameter(double keliling) {
+    return keliling / math.pi;
+  }
 
   /// Konversi dari Map SQLite ke objek PlantingPoint
   factory PlantingPoint.fromMap(Map<String, dynamic> map) {
@@ -50,6 +60,8 @@ class PlantingPoint {
       spesies: map['spesies'] as String,
       kondisi: map['kondisi'] as String,
       catatan: map['catatan'] as String?,
+      tinggi: map['tinggi'] as double?,
+      diameter: map['diameter'] as double?,
       fotoLocalPath: map['foto_local_path'] as String?,
       fotoCloudUrl: map['foto_cloud_url'] as String?,
       deviceId: map['device_id'] as String,
@@ -72,6 +84,8 @@ class PlantingPoint {
       'spesies': spesies,
       'kondisi': kondisi,
       'catatan': catatan,
+      'tinggi': tinggi,
+      'diameter': diameter,
       'foto_local_path': fotoLocalPath,
       'foto_cloud_url': fotoCloudUrl,
       'device_id': deviceId,
@@ -94,6 +108,8 @@ class PlantingPoint {
       'spesies': spesies,
       'kondisi': kondisi,
       'catatan': catatan,
+      'tinggi': tinggi,
+      'diameter': diameter,
       'foto_url': fotoCloudUrl,
       'device_id': deviceId,
       'recorded_by': recordedBy,

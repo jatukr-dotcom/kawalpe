@@ -54,6 +54,9 @@ class _AddPointScreenState extends State<AddPointScreen> {
   String? _selectedSpesies;
   String _kondisi = 'Sehat'; // default kondisi baru
   final _catatanController = TextEditingController();
+  final _tinggiController = TextEditingController();
+  final _kelilingController = TextEditingController();
+  double? _previewDiameter; // preview diameter hasil konversi keliling / π
 
   // Daftar spesies dari SQLite (dinamis)
   List<String> _daftarSpesies = [];
@@ -306,6 +309,19 @@ class _AddPointScreenState extends State<AddPointScreen> {
 
     try {
       final currentUsername = AuthService().currentUser?.username;
+      // Parse tinggi (opsional)
+      final double? tinggi = _tinggiController.text.trim().isEmpty
+          ? null
+          : double.tryParse(_tinggiController.text.trim().replaceAll(',', '.'));
+
+      // Konversi keliling → diameter: d = keliling / π
+      final double? diameter = _kelilingController.text.trim().isEmpty
+          ? null
+          : PlantingPoint.kelilingToDiameter(
+              double.tryParse(
+                      _kelilingController.text.trim().replaceAll(',', '.')) ??
+                  0);
+
       final point = PlantingPoint(
         id: const Uuid().v4(),
         projectId: widget.project.id,
@@ -317,9 +333,11 @@ class _AddPointScreenState extends State<AddPointScreen> {
         catatan: _catatanController.text.trim().isEmpty
             ? null
             : _catatanController.text.trim(),
+        tinggi: tinggi,
+        diameter: diameter,
         fotoLocalPath: _fotoPath,
         deviceId: _deviceId,
-        recordedBy: currentUsername, // simpan username petugas
+        recordedBy: currentUsername,
         timestamp: DateTime.now().toIso8601String(),
         synced: false,
         syncAttempt: 0,
@@ -409,6 +427,8 @@ class _AddPointScreenState extends State<AddPointScreen> {
     _calibrationTimer?.cancel();
     _gpsService.stopStream();
     _catatanController.dispose();
+    _tinggiController.dispose();
+    _kelilingController.dispose();
     super.dispose();
   }
 
@@ -850,6 +870,97 @@ class _AddPointScreenState extends State<AddPointScreen> {
             ),
             const SizedBox(height: 16),
 
+            // Tinggi & Diameter (Keliling)
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Input Tinggi
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text('Tinggi (cm)',
+                          style: TextStyle(fontWeight: FontWeight.bold)),
+                      const SizedBox(height: 8),
+                      TextFormField(
+                        controller: _tinggiController,
+                        keyboardType: const TextInputType.numberWithOptions(
+                            decimal: true),
+                        decoration: const InputDecoration(
+                          hintText: 'Contoh: 150',
+                          prefixIcon: Icon(Icons.height),
+                          suffixText: 'cm',
+                        ),
+                        validator: (v) {
+                          if (v != null && v.trim().isNotEmpty) {
+                            final n = double.tryParse(
+                                v.trim().replaceAll(',', '.'));
+                            if (n == null || n <= 0) {
+                              return 'Angka tidak valid';
+                            }
+                          }
+                          return null;
+                        },
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 12),
+                // Input Keliling → Diameter
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text('Keliling Batang (cm)',
+                          style: TextStyle(fontWeight: FontWeight.bold)),
+                      const SizedBox(height: 8),
+                      TextFormField(
+                        controller: _kelilingController,
+                        keyboardType: const TextInputType.numberWithOptions(
+                            decimal: true),
+                        decoration: InputDecoration(
+                          hintText: 'Contoh: 31.4',
+                          prefixIcon: const Icon(Icons.radio_button_unchecked),
+                          suffixText: 'cm',
+                          helperText: _previewDiameter != null
+                              ? '⌀ ${_previewDiameter!.toStringAsFixed(2)} cm'
+                              : 'Keliling → Diameter otomatis',
+                          helperStyle: TextStyle(
+                            color: _previewDiameter != null
+                                ? const Color(0xFF2E7D32)
+                                : Colors.grey,
+                            fontWeight: _previewDiameter != null
+                                ? FontWeight.bold
+                                : FontWeight.normal,
+                          ),
+                        ),
+                        onChanged: (v) {
+                          final keliling = double.tryParse(
+                              v.trim().replaceAll(',', '.'));
+                          setState(() {
+                            _previewDiameter = (keliling != null && keliling > 0)
+                                ? PlantingPoint.kelilingToDiameter(keliling)
+                                : null;
+                          });
+                        },
+                        validator: (v) {
+                          if (v != null && v.trim().isNotEmpty) {
+                            final n = double.tryParse(
+                                v.trim().replaceAll(',', '.'));
+                            if (n == null || n <= 0) {
+                              return 'Angka tidak valid';
+                            }
+                          }
+                          return null;
+                        },
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+
             // Catatan
             const Text('Catatan (opsional)',
                 style: TextStyle(fontWeight: FontWeight.bold)),
@@ -857,7 +968,7 @@ class _AddPointScreenState extends State<AddPointScreen> {
             TextFormField(
               controller: _catatanController,
               decoration: const InputDecoration(
-                hintText: 'Keterangan tambahan (tinggi pohon, hambatan, dll.)',
+                hintText: 'Keterangan tambahan (hambatan, dll.)',
                 prefixIcon: Icon(Icons.notes),
                 alignLabelWithHint: true,
               ),
