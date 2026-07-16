@@ -476,7 +476,7 @@ class SyncService {
           'role': user.role,
           'created_at': user.createdAt,
           'salt': user.salt,
-        }, onConflict: 'username');
+        }, onConflict: 'username', ignoreDuplicates: false);
         count++;
       }
       debugPrint('SyncService pushUsers: $count akun dikirim ke Supabase');

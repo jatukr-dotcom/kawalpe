@@ -12,6 +12,7 @@ import 'config/app_config.dart';
 import 'screens/home_screen.dart';
 import 'screens/login_screen.dart';
 import 'services/auth_service.dart';
+import 'services/sync_service.dart';
 
 // Warna tema aplikasi - hijau BKSDA
 const Color kPrimaryColor = Color(0xFF2E7D32);
@@ -36,6 +37,10 @@ void main() async {
 
   // Muat sesi login dari penyimpanan lokal
   await AuthService().loadSession();
+
+  // Pull user terbaru dari Supabase di background saat app dibuka
+  // Tidak menunggu hasilnya agar startup tidak lambat
+  SyncService().syncUsers().catchError((_) {});
 
   runApp(const KawalPEApp());
 }

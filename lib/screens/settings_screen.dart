@@ -32,6 +32,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   String _appVersion = '1.0.0';
 
   bool _isSaving = false;
+  bool _isSyncing = false;
   bool _obscureKey = true;
 
   @override
@@ -66,6 +67,48 @@ class _SettingsScreenState extends State<SettingsScreen> {
         setState(() => _appVersion = '${info.version}+${info.buildNumber}');
       }
     } catch (_) {}
+  }
+
+  Future<void> _sinkronisasiPengguna() async {
+    if (!await _syncService.isOnline()) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Tidak ada koneksi internet.'),
+            backgroundColor: Colors.orange,
+          ),
+        );
+      }
+      return;
+    }
+
+    setState(() => _isSyncing = true);
+    try {
+      final count = await _syncService.syncUsers();
+      if (mounted) {
+        setState(() => _isSyncing = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              count > 0
+                  ? '✅ $count pengguna berhasil disinkronkan.'
+                  : 'Semua pengguna sudah sinkron.',
+            ),
+            backgroundColor: const Color(0xFF2E7D32),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isSyncing = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Gagal sinkronisasi: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
   }
 
   Future<void> _simpanPengaturan() async {
@@ -321,6 +364,30 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         )
                       : const Icon(Icons.save),
                   label: Text(_isSaving ? 'Menyimpan...' : 'Simpan Pengaturan'),
+                ),
+              ),
+              const SizedBox(height: 12),
+
+              // Tombol sinkronisasi pengguna
+              SizedBox(
+                width: double.infinity,
+                height: 56,
+                child: OutlinedButton.icon(
+                  onPressed: _isSyncing ? null : _sinkronisasiPengguna,
+                  icon: _isSyncing
+                      ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Icon(Icons.sync),
+                  label: Text(
+                    _isSyncing ? 'Menyinkronkan...' : 'Sinkronisasi Pengguna',
+                  ),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: const Color(0xFF2E7D32),
+                    side: const BorderSide(color: Color(0xFF2E7D32)),
+                  ),
                 ),
               ),
             ],

@@ -23,12 +23,27 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
   @override
   void initState() {
     super.initState();
-    _loadUsers();
+    _loadUsersWithSync();
+  }
+
+  /// Load user dari lokal, lalu pull dari Supabase jika online
+  Future<void> _loadUsersWithSync() async {
+    await _loadUsers(); // tampilkan data lokal dulu (cepat)
+    if (await _sync.isOnline()) {
+      await _sync.syncUsers(); // pull data terbaru dari Supabase
+      await _loadUsers();      // refresh tampilan
+    }
   }
 
   Future<void> _loadUsers() async {
     final users = await _auth.getAllUsers();
-    if (mounted) setState(() { _users = users; _loading = false; });
+    if (mounted) {
+      // Debug: cek apakah salt sudah terbaca dari SQLite lokal
+      for (final u in users) {
+        debugPrint('USER: ${u.username} | salt=${u.salt}');
+      }
+      setState(() { _users = users; _loading = false; });
+    }
   }
 
   void _showCreateUserDialog() {
@@ -151,6 +166,10 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
                   Navigator.pop(ctx);
                   if (user != null) {
                     _loadUsers();
+                    // Push user baru ke Supabase jika online
+                    if (await _sync.isOnline()) {
+                      await _sync.pushUsers();
+                    }
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
                         content:
