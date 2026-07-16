@@ -23,12 +23,19 @@ class ProjectScreen extends StatefulWidget {
 class _ProjectScreenState extends State<ProjectScreen> {
   final DatabaseHelper _db = DatabaseHelper();
   final SyncService _syncService = SyncService();
+  final ScrollController _scrollController = ScrollController();
+
+  static const int _pageSize = 20;
 
   List<PlantingPoint> _points = [];
   Project? _project;
   bool _isLoading = false;
+  bool _isLoadingMore = false; // sedang load halaman berikutnya
+  bool _hasMore = true;        // masih ada data di DB
+  int _currentOffset = 0;
   bool _isSyncing = false;
   bool _isOnline = false;
+  String? _recordedBy;         // filter user (null = admin)
 
   @override
   void initState() {
@@ -36,6 +43,7 @@ class _ProjectScreenState extends State<ProjectScreen> {
     _project = widget.project;
     _loadData();
     _checkConnectivity();
+    _scrollController.addListener(_onScroll);
     Connectivity().onConnectivityChanged.listen((results) {
       if (mounted) {
         setState(() {
@@ -43,6 +51,20 @@ class _ProjectScreenState extends State<ProjectScreen> {
         });
       }
     });
+  }
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  /// Deteksi scroll mendekati bawah → load halaman berikutnya
+  void _onScroll() {
+    if (_scrollController.position.pixels >=
+        _scrollController.position.maxScrollExtent - 200) {
+      _loadMore();
+    }
   }
 
   Future<void> _checkConnectivity() async {
@@ -55,21 +77,29 @@ class _ProjectScreenState extends State<ProjectScreen> {
   }
 
   Future<void> _loadData() async {
-    setState(() => _isLoading = true);
+    setState(() {
+      _isLoading = true;
+      _points = [];
+      _currentOffset = 0;
+      _hasMore = true;
+    });
     try {
       final auth = AuthService();
       final isAdmin = auth.isAdmin;
-      // Admin lihat semua titik, petugas hanya titik miliknya sendiri
-      final recordedBy = isAdmin ? null : auth.currentUser?.username;
+      _recordedBy = isAdmin ? null : auth.currentUser?.username;
 
       final points = await _db.getPointsByProject(
         widget.project.id,
-        recordedBy: recordedBy,
+        limit: _pageSize,
+        offset: 0,
+        recordedBy: _recordedBy,
       );
       final project = await _db.getProjectById(widget.project.id);
       if (mounted) {
         setState(() {
           _points = points;
+          _currentOffset = points.length;
+          _hasMore = points.length == _pageSize;
           _project = project ?? widget.project;
           _isLoading = false;
         });
@@ -79,6 +109,30 @@ class _ProjectScreenState extends State<ProjectScreen> {
         setState(() => _isLoading = false);
         _showSnackBar('Gagal memuat data: $e', isError: true);
       }
+    }
+  }
+
+  /// Load halaman berikutnya saat scroll ke bawah
+  Future<void> _loadMore() async {
+    if (_isLoadingMore || !_hasMore) return;
+    setState(() => _isLoadingMore = true);
+    try {
+      final more = await _db.getPointsByProject(
+        widget.project.id,
+        limit: _pageSize,
+        offset: _currentOffset,
+        recordedBy: _recordedBy,
+      );
+      if (mounted) {
+        setState(() {
+          _points.addAll(more);
+          _currentOffset += more.length;
+          _hasMore = more.length == _pageSize;
+          _isLoadingMore = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) setState(() => _isLoadingMore = false);
     }
   }
 
@@ -182,6 +236,7 @@ class _ProjectScreenState extends State<ProjectScreen> {
           : RefreshIndicator(
               onRefresh: _loadData,
               child: CustomScrollView(
+                controller: _scrollController,
                 slivers: [
                   // Sub-header info proyek
                   SliverToBoxAdapter(
@@ -193,7 +248,6 @@ class _ProjectScreenState extends State<ProjectScreen> {
                     child: _buildStatsCard(project, synced),
                   ),
 
-                  // Daftar titik atau empty state
                   if (_points.isEmpty)
                     SliverFillRemaining(
                       child: _buildEmptyPointsState(),
@@ -203,7 +257,8 @@ class _ProjectScreenState extends State<ProjectScreen> {
                       child: Padding(
                         padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
                         child: Text(
-                          '${_points.length} titik terbaru (dari ${project.jumlahTitik} total)',
+                          'Menampilkan ${_points.length} titik'
+                          '${_hasMore ? ' (scroll untuk load lebih)' : ' (semua dimuat)'}',
                           style: const TextStyle(
                               fontSize: 12, color: Colors.grey),
                         ),
@@ -218,6 +273,44 @@ class _ProjectScreenState extends State<ProjectScreen> {
                         childCount: _points.length,
                       ),
                     ),
+                    // Indikator loading halaman berikutnya
+                    if (_isLoadingMore)
+                      const SliverToBoxAdapter(
+                        child: Padding(
+                          padding: EdgeInsets.symmetric(vertical: 16),
+                          child: Center(
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                SizedBox(
+                                  width: 16,
+                                  height: 16,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    color: Color(0xFF2E7D32),
+                                  ),
+                                ),
+                                SizedBox(width: 8),
+                                Text('Memuat lebih...',
+                                    style: TextStyle(
+                                        fontSize: 12, color: Colors.grey)),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                    if (!_hasMore && _points.isNotEmpty)
+                      const SliverToBoxAdapter(
+                        child: Padding(
+                          padding: EdgeInsets.symmetric(vertical: 12),
+                          child: Center(
+                            child: Text(
+                              '✅ Semua titik sudah dimuat',
+                              style: TextStyle(fontSize: 12, color: Colors.grey),
+                            ),
+                          ),
+                        ),
+                      ),
                   ],
 
                   // Padding FAB

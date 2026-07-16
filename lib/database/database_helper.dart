@@ -296,7 +296,8 @@ class DatabaseHelper {
   ///               jika null (admin), ambil semua titik.
   Future<List<PlantingPoint>> getPointsByProject(
     String projectId, {
-    int limit = 200,
+    int limit = 20,
+    int offset = 0,
     String? recordedBy,
   }) async {
     final db = await database;
@@ -316,8 +317,28 @@ class DatabaseHelper {
       whereArgs: whereArgs,
       orderBy: 'timestamp DESC',
       limit: limit,
+      offset: offset,
     );
     return result.map((map) => PlantingPoint.fromMap(map)).toList();
+  }
+
+  /// Hitung total titik di project (untuk mengetahui apakah masih ada halaman berikutnya)
+  Future<int> countPointsByProject(
+    String projectId, {
+    String? recordedBy,
+  }) async {
+    final db = await database;
+    String where = 'project_id = ?';
+    final whereArgs = <dynamic>[projectId];
+    if (recordedBy != null) {
+      where += ' AND recorded_by = ?';
+      whereArgs.add(recordedBy);
+    }
+    final result = await db.rawQuery(
+      'SELECT COUNT(*) as cnt FROM planting_points WHERE $where',
+      whereArgs,
+    );
+    return (result.first['cnt'] as int? ?? 0);
   }
 
   /// Hapus record titik dari SQLite setelah berhasil di-sync ke Supabase.
